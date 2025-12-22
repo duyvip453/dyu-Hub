@@ -1,4 +1,4 @@
-local UI = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))();
+local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/loader.lua"))();
 local window = UI:CreateWindow({
     Title = "SclScl Hub",-- thay tên bạn muốn đặt
     SubTitle = "By duyvip",-- tên bạn
