@@ -76,9 +76,9 @@ for _, area in pairs(Areas) do
 end
 
 tab.Home:AddDropdown("AreaSelect", {
-    Title = "Chọn khu vực farm",
+    Title = "Area farm",
     Values = AreaNames,
-    Multi = false, -- chỉ chọn 1
+    Multi = true, -- chỉ chọn 1
     Default = nil,
     Callback = function(value)
         for _, area in pairs(Areas) do
@@ -87,5 +87,27 @@ tab.Home:AddDropdown("AreaSelect", {
                 break
             end
         end
+    end
+})
+local RockSection = tab.Home:AddSection("Rock Priority")
+RockSection:AddLabel("high value = fisrt farm, small value = last farm ")
+local RockValues  = {
+    ["Basalt Rock"] = 0,
+    ["Basalt Core"] = 0,
+    ["Basalt Vein"] = 0,
+   ["Volcanic Rock"] = 0
+}
+for rockName, value in pairs(RockValues) do
+    RockSection:AddLabel(rockName .. " : " .. tostring(value))
+end
+_G.RockPriorityValue = 0 -- mặc định 0
+
+RockSection:AddSlider("RockPrioritySlider", {
+    Title = "Priority Threshold",
+    Min = 0,
+    Max = 10,
+    Default = 0,
+    Callback = function(v)
+        _G.RockPriorityValue = math.floor(v + 0.5)
     end
 })
