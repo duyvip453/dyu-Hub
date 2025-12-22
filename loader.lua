@@ -97,8 +97,8 @@ local RockValues  = {
     ["Basalt Vein"] = 0,
    ["Volcanic Rock"] = 0
 }
-for rockName, value in pairs(RockValues) do
-    RockSection:AddLabel(rockName .. " : " .. tostring(value))
+for rockName, v in pairs(RockValues) do
+    RockSection:AddLabel(rockName .. " : " .. tostring(v))
 end
 _G.RockPriorityValue = 0 -- mặc định 0
 
@@ -107,7 +107,7 @@ RockSection:AddSlider("RockPrioritySlider", {
     Min = 0,
     Max = 10,
     Default = 0,
-    Callback = function(v)
-        _G.RockPriorityValue = math.floor(v + 0.5)
+    Callback = function(val)
+        _G.RockPriorityValue = math.floor(val + 0.5)
     end
 })
