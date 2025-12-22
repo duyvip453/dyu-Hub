@@ -13,11 +13,8 @@ local tab = {
         Title = "farm"
     })
 };
+local FarmSection = tab.Home:AddSection("farm")
 local v17 = UI.Options;
-local id = game.PlaceId;
-if (id == 76558904092080) then
-    duyvip = true;
-end
 game:GetService("Players").LocalPlayer.Idled:connect(function()
     game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
     wait();
