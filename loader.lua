@@ -25,7 +25,7 @@ game:GetService("Players").LocalPlayer.Idled:connect(function()
 end);
 _G.AutoFarm = false
 
-tab.Farm:AddToggle("AutoFarmToggle", {
+tab.farm:AddToggle("AutoFarmToggle", {
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
