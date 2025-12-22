@@ -18,7 +18,8 @@ local id = game.PlaceId;
 if (id == 76558904092080) then
     duyvip = true;
 else
-    game:Shutdown();
+warn("Game này không được hỗ trợ")
+return
 end
 game:GetService("Players").LocalPlayer.Idled:connect(function()
     game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
