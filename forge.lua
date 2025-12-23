@@ -17,7 +17,6 @@ tab.Home:AddToggle({
         print("AutoFarm:", Value)
     end
 })
-end
 local Areas = {
     {
         Name = "Island2CaveDanger1",
