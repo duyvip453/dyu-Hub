@@ -4,17 +4,12 @@ local tab = {
         Title = "farm"
     })
 };
-local FarmSection = tab.Home:AddSection({
+    local FarmSection = tab.Home:AddSection({
     Title = "farm"
 })
-game:GetService("Players").LocalPlayer.Idled:connect(function()
-    game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
-    wait();
-    game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
-end);
 _G.AutoFarm = false
 
-tab.Home:AddToggle("AutoFarmToggle", {
+tab.Home:AddToggle({
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
@@ -102,5 +97,10 @@ RockSection:AddSlider("RockPrioritySlider", {
     Callback = function(val)
         _G.RockPriorityValue = math.floor(val + 0.5)
     end
+            game:GetService("Players").LocalPlayer.Idled:connect(function()
+    game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
+    wait();
+    game:GetService("VirtualUser"):Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
+end);
 })
 end
