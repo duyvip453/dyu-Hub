@@ -9,4 +9,4 @@ local window = UI:CreateWindow({
     MinimizeKey = Enum.KeyCode.End
 });
 local v17 = UI.Options;
-loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/froge"))(UI, window);
+loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/froge"))()(UI, window);
