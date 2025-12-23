@@ -9,4 +9,5 @@ local window = UI:CreateWindow({
     MinimizeKey = Enum.KeyCode.End
 });
 local v17 = UI.Options;
-loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/forge.lua"))()(UI, window);
+local forge = loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/forge.lua"))()
+forge(UI, window);
