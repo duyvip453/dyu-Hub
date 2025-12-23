@@ -4,12 +4,10 @@ local tab = {
         Title = "farm"
     })
 };
-    local FarmSection = tab.Home:AddSection({
-    Title = "farm"
-})
+    local FarmSection = tab.Home:AddSection("farm")
 _G.AutoFarm = false
 
-FarmSection:AddToggle({
+FarmSection:AddToggle("autofarm", {
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
