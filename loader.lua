@@ -8,12 +8,6 @@ local window = UI:CreateWindow({
     Size = UDim2.fromOffset(500, 320),
     MinimizeKey = Enum.KeyCode.End
 });
-local tab = {
-    Home = window:AddTab({
-        Title = "farm"
-    })
-};
-local FarmSection = tab.Home:AddSection("farm")
 local v17 = UI.Options;
 game:GetService("Players").LocalPlayer.Idled:connect(function()
     game:GetService("VirtualUser"):Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame);
