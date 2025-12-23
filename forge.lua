@@ -7,7 +7,7 @@ local tab = {
     local FarmSection = tab.Home:AddSection("farm")
 _G.AutoFarm = false
 
-FarmSection:AddToggle("autofarm", {
+tab.home:AddToggle("autofarm", {
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
