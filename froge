@@ -1,1 +1,6 @@
-
+local tab = {
+    Home = window:AddTab({
+        Title = "farm"
+    })
+};
+local FarmSection = tab.Home:AddSection("farm")
