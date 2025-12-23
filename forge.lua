@@ -9,7 +9,7 @@ local tab = {
 })
 _G.AutoFarm = false
 
-tab.Home:AddToggle({
+FarmSection:AddToggle({
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
