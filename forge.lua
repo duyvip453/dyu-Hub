@@ -101,3 +101,4 @@ RockSection:AddSlider("RockPrioritySlider", {
         _G.RockPriorityValue = math.floor(val + 0.5)
     end
 })
+end
