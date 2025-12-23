@@ -4,10 +4,12 @@ local tab = {
         Title = "farm"
     })
 };
-    local FarmSection = tab.Home:AddSection("farm")
+    local FarmSection = tab.Home:AddSection({
+    Title = "farm"
+})
 _G.AutoFarm = false
 
-tab.home:AddToggle("autofarm", {
+tab.Home:AddToggle({
     Title = "Auto Farm",
     Default = false,
     Callback = function(Value)
@@ -15,6 +17,7 @@ tab.home:AddToggle("autofarm", {
         print("AutoFarm:", Value)
     end
 })
+end
 local Areas = {
     {
         Name = "Island2CaveDanger1",
