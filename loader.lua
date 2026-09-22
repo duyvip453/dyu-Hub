@@ -1,9 +1,10 @@
 
-local UILibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua"))()
+-- Thêm "?t=" .. tick() vào cuối link để ép tải bản mới nhất, bỏ qua cache của GitHub
+local url = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua" .. tostring(tick())
+local UILibrary = loadstring(game:HttpGet(url))()
 
--- 2. Tạo Box Chính
+-- Sau đó mới gọi hàm
 local MyWindow = UILibrary:CreateWindow("SUPER HUB 2026")
-
 -- 3. Tạo Các Mục Lớn
 local TabNguoiChoi = MyWindow:CreateTab("Người Chơi")
 local TabVuKhi = MyWindow:CreateTab("Vũ Khí")
