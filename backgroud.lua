@@ -1,15 +1,17 @@
 local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
+local UIModule = {}
 
+function UIModule:Init()
 local Window = Luna:CreateWindow({
 	Name = "DYU HUB", -- This Is Title Of Your Window
 	Subtitle = nil, -- A Gray Subtitle next To the main title.
 	LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
 	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
-	LoadingTitle = "Luna Interface Suite", -- Header for loading screen
-	LoadingSubtitle = "by Hland", -- Subtitle for loading screen
+	LoadingTitle = "DYU HUB", -- Header for loading screen
+	LoadingSubtitle = "by duy duy", -- Subtitle for loading screen
 
 	ConfigSettings = {
-		ConfigFolder = "Big Hub" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
+		ConfigFolder = "DYU HUB" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
 	},
 
 	KeySystem = false, -- As Of Beta 6, Luna Has officially Implemented A Key System!
@@ -108,3 +110,6 @@ local Label = Tab:CreateLabel({
 	Text = "Label Example",
 	Style = 2 -- Luna Labels Have 3 Styles : A Basic Label, A Green Information Label and A Red Warning Label. Look At The Following Image For More Details
 })
+	return Window
+end
+return UIModule
