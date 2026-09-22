@@ -1,6 +1,6 @@
 
 -- Thêm "?t=" .. tick() vào cuối link để ép tải bản mới nhất, bỏ qua cache của GitHub
-local url = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua" .. tostring(tick())
+local url = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?t=" .. tostring(tick())
 local UILibrary = loadstring(game:HttpGet(url))()
 
 -- Sau đó mới gọi hàm
