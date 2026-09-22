@@ -46,7 +46,7 @@ function UILibrary:CreateWindow(titleText)
     MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
     MinimizeBtn.Text = "-"
     MinimizeBtn.TextColor3 = UILibrary.Theme.TextColor
-    MinimizeBtn.BackgroundColor3 = UILibrary.Theme.TabColor
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
     MinimizeBtn.Font = UILibrary.Theme.Font
     MinimizeBtn.TextSize = 18
 
