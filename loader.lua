@@ -1,3 +1,27 @@
+local HttpService = game:GetService("HttpService")
+local Player = game.Players.LocalPlayer
+local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
+
+local Settings = { 
+    JumpToggle = false, 
+    SpeedSlider = 16 
+}
+
+local function SaveConfig()
+    writefile(ConfigFileName, HttpService:JSONEncode(Settings))
+end
+
+local function LoadConfig()
+    if isfile(ConfigFileName) then
+        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
+        if success and decoded then
+            for k, v in pairs(decoded) do Settings[k] = v end
+        end
+    else
+        SaveConfig()
+    end
+end
+LoadConfig()
 -- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local UIModule = loadstring(game:HttpGet(bgUrl))()
