@@ -54,23 +54,20 @@ Tab1:CreateButton({
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
-    Description = "Kích hoạt hòm thư mà không cần đứng vào vòng Pad",
+    Description = "Bật/Tắt giao diện Hộp thư trực tiếp tại chỗ",
     Callback = function()
-        local player = game.Players.LocalPlayer
-        local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        local mailGui = playerGui and playerGui:FindFirstChild("MailboxMachine")
         
-        -- Đường dẫn chuẩn xác từ hình ảnh Dex Explorer
-        local mailboxPad = workspace:FindFirstChild("Machines") 
-            and workspace.Machines:FindFirstChild("MailboxMachine") 
-            and workspace.Machines.MailboxMachine:FindFirstChild("Pad")
-
-        if hrp and mailboxPad then
-            -- Giả lập chân nhân vật chạm vào Pad
-            firetouchinterest(hrp, mailboxPad, 0)
-            task.wait(0.1)
-            firetouchinterest(hrp, mailboxPad, 1)
+        if mailGui then
+            -- Tự động bật/tắt (nhấn 1 lần mở, nhấn lần nữa đóng)
+            if mailGui:IsA("ScreenGui") then
+                mailGui.Enabled = not mailGui.Enabled
+            else
+                mailGui.Visible = not mailGui.Visible
+            end
         else
-            warn("[DYU HUB]: Không tìm thấy MailboxMachine.Pad trong Workspace!")
+            warn("[DYU HUB]: Không tìm thấy MailboxMachine trong PlayerGui!")
         end
     end
 })
