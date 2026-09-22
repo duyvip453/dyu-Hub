@@ -7,6 +7,7 @@ UILibrary.Theme = {
     BgColor = Color3.fromRGB(30, 30, 35),       -- Nền chính
     TabColor = Color3.fromRGB(45, 45, 50),      -- Nền danh mục
     TextColor = Color3.fromRGB(255, 255, 255),  -- Màu chữ
+    RedColor = Color3.fromRGB(220, 50, 50),
     Font = Enum.Font.GothamBold                 -- Font chữ chung
 }
 
@@ -67,7 +68,7 @@ function UILibrary:CreateWindow(titleText)
     CloseBtn.Position = UDim2.new(1, -35, 0, 5)
     CloseBtn.Text = "X"
     CloseBtn.TextColor3 = UILibrary.Theme.TextColor
-    CloseBtn.BackgroundColor3 = UILibrary.Theme.RedColor
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
     CloseBtn.Font = UILibrary.Theme.Font
 
     CloseBtn.MouseButton1Click:Connect(function()
