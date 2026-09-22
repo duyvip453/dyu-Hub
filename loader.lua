@@ -1,5 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua"))();
--- 1. Gọi File Giao Diện (Thường bạn sẽ dùng loadstring từ link GitHub)
+
 local UILibrary = loadstring(game:HttpGet("LINK_RAW_GITHUB_CUA_FILE_UI_LIB"))()
 
 -- 2. Tạo Box Chính
