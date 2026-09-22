@@ -22,6 +22,7 @@ local function LoadConfig()
     end
 end
 LoadConfig()
+local isLoaded = false
 -- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local UIModule = loadstring(game:HttpGet(bgUrl))()
@@ -73,10 +74,18 @@ Tab1:CreateSlider({
     Name = "Chỉnh Tốc Độ Custom",
     Range = {16, 200},
     Increment = 1,
-    CurrentValue = 16,
+    CurrentValue = Settings.SpeedSlider, -- BẮT BUỘC PHẢI LÀ DÒNG NÀY (Không để số 16)
     Callback = function(Value)
         if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
             game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
         end
+        
+        -- Chỉ lưu config khi script ĐÃ TẢI XONG, chống UI tự động ghi đè lúc khởi tạo
+        if isLoaded then
+            Settings.SpeedSlider = Value
+            SaveConfig()
+        end
     end
 }, "Slider_Speed")
+task.wait(0.5)
+isLoaded = true
