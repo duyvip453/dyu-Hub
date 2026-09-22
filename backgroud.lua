@@ -1,7 +1,7 @@
 local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
 
 local Window = Luna:CreateWindow({
-	Name = "BlackKing", -- This Is Title Of Your Window
+	Name = "DYU HUB", -- This Is Title Of Your Window
 	Subtitle = nil, -- A Gray Subtitle next To the main title.
 	LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
 	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
@@ -9,7 +9,6 @@ local Window = Luna:CreateWindow({
 	LoadingSubtitle = "by Hland", -- Subtitle for loading screen
 
 	ConfigSettings = {
-		RootFolder = nil, -- The Root Folder Is Only If You Have A Hub With Multiple Game Scripts and u may remove it. DO NOT ADD A SLASH
 		ConfigFolder = "Big Hub" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
 	},
 
