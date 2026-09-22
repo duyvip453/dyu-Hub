@@ -15,8 +15,14 @@ UILibrary.Theme = {
 -- ==========================================
 function UILibrary:CreateWindow(titleText)
     -- Tạo màn hình UI chứa box
-    local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    
+    local coreGui = game:GetService("CoreGui")
+    local guiName = "DYUHUB" -- Tên định danh độc nhất cho Script của bạn
+
+    -- [QUAN TRỌNG 1]: XÓA BẢN CŨ KHI EXECUTE LẠI
+    -- Nếu tìm thấy UI cũ đang chạy, lập tức tiêu diệt nó để tránh trùng lặp
+    if coreGui:FindFirstChild(guiName) then
+        coreGui[guiName]:Destroy()
+    end
     -- Tạo Box chính
     local MainBox = Instance.new("Frame", ScreenGui)
     MainBox.Size = UDim2.new(0, 500, 0, 350)
@@ -24,7 +30,8 @@ function UILibrary:CreateWindow(titleText)
     MainBox.BackgroundColor3 = UILibrary.Theme.BgColor
     MainBox.Active = true
     MainBox.Draggable = true -- TÍNH NĂNG: Cho phép di chuyển Box bất cứ đâu
-
+-- [QUAN TRỌNG 2]: Cho phép cắt bỏ phần hình ảnh bị tràn ra ngoài khung
+    MainBox.ClipsDescendants = true
     -- Tạo Tiêu đề Box ở trên cùng
     local Title = Instance.new("TextLabel", MainBox)
     Title.Size = UDim2.new(1, 0, 0, 30)
@@ -32,7 +39,41 @@ function UILibrary:CreateWindow(titleText)
     Title.TextColor3 = UILibrary.Theme.TextColor
     Title.Font = UILibrary.Theme.Font
     Title.BackgroundTransparency = 1
+-- [TÍNH NĂNG MỚI]: Nút Thu Nhỏ (-)
+    local MinimizeBtn = Instance.new("TextButton", MainBox)
+    MinimizeBtn.Size = UDim2.new(0, 30, 0, 25)
+    MinimizeBtn.Position = UDim2.new(1, -70, 0, 5)
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextColor3 = UILibrary.Theme.TextColor
+    MinimizeBtn.BackgroundColor3 = UILibrary.Theme.TabColor
+    MinimizeBtn.Font = UILibrary.Theme.Font
+    MinimizeBtn.TextSize = 18
 
+    local isMinimized = false
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            -- Cụp bảng lại (Chỉ hiện chiều cao 35px của thanh tiêu đề)
+            MainBox.Size = UDim2.new(0, 500, 0, 35)
+        else
+            -- Mở bảng ra kích thước chuẩn ban đầu
+            MainBox.Size = UDim2.new(0, 500, 0, 350)
+        end
+    end)
+
+    -- [TÍNH NĂNG MỚI]: Nút Tắt (X)
+    local CloseBtn = Instance.new("TextButton", MainBox)
+    CloseBtn.Size = UDim2.new(0, 30, 0, 25)
+    CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = UILibrary.Theme.TextColor
+    CloseBtn.BackgroundColor3 = UILibrary.Theme.RedColor
+    CloseBtn.Font = UILibrary.Theme.Font
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        -- Hủy diệt toàn bộ giao diện khi bấm Tắt
+        ScreenGui:Destroy()
+    end)
     -- Tạo Ô Tìm Kiếm (Ngay dưới tiêu đề)
     local SearchBox = Instance.new("TextBox", MainBox)
     SearchBox.Size = UDim2.new(1, -20, 0, 30)
