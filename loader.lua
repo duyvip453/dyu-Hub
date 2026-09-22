@@ -54,20 +54,26 @@ Tab1:CreateButton({
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
-    Description = "Bật/Tắt giao diện Hộp thư trực tiếp tại chỗ",
+    Description = "Mở trực tiếp MailboxMachine trong _MACHINES",
     Callback = function()
         local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-        local mailGui = playerGui and playerGui:FindFirstChild("MailboxMachine")
-        
-        if mailGui then
-            -- Tự động bật/tắt (nhấn 1 lần mở, nhấn lần nữa đóng)
+        local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
+        local mailGui = machines and machines:FindFirstChild("MailboxMachine")
+
+        if machines and mailGui then
+            -- Nếu _MACHINES là ScreenGui, đảm bảo lớp ngoài luôn bật
+            if machines:IsA("ScreenGui") then
+                machines.Enabled = true
+            end
+
+            -- Bật/tắt MailboxMachine (Nhấn 1 lần mở, nhấn 1 lần đóng)
             if mailGui:IsA("ScreenGui") then
                 mailGui.Enabled = not mailGui.Enabled
             else
                 mailGui.Visible = not mailGui.Visible
             end
         else
-            warn("[DYU HUB]: Không tìm thấy MailboxMachine trong PlayerGui!")
+            warn("[DYU HUB]: Không tìm thấy PlayerGui._MACHINES.MailboxMachine!")
         end
     end
 })
