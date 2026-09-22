@@ -1,5 +1,5 @@
 
-local UILibrary = loadstring(game:HttpGet("LINK_RAW_GITHUB_CUA_FILE_UI_LIB"))()
+local UILibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua"))()
 
 -- 2. Tạo Box Chính
 local MyWindow = UILibrary:CreateWindow("SUPER HUB 2026")
