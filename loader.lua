@@ -9,8 +9,11 @@ end
 local function LoadConfig()
     if isfile(ConfigFileName) then
         local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
-        if success and decoded then
+        -- Kiểm tra chắc chắn dữ liệu đọc ra phải là 1 bảng (table) thì mới lấy dữ liệu
+        if success and type(decoded) == "table" then
             for k, v in pairs(decoded) do Settings[k] = v end
+        else
+            SaveConfig() -- Nếu file bị hỏng (nil) sẽ tự động tạo lại file mới
         end
     else
         SaveConfig()
@@ -60,6 +63,8 @@ Tab1:CreateButton({
         end
     end
 })
+
+
 local AutoClaimMail = false
 
 local function clickButton(btn)
