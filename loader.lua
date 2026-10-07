@@ -16,9 +16,6 @@ local function LoadConfig()
             SaveConfig() -- Nếu file bị hỏng (nil) sẽ tự động tạo lại file mới
         end
     else
-        SaveConfig()
-    end
-end
 LoadConfig()
 local isLoaded = false
 -- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
