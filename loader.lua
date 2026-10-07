@@ -21,9 +21,8 @@ local isLoaded = false
 -- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
-
 if not success or not rawCode or rawCode == "" then
-    return warn("[DYU HUB]: Lỗi kết nối GitHub, hãy thử bật 1.1.1.1 / VPN rồi execute lại!")
+    return warn("[DYU HUB]: Không thể tải background UI từ GitHub!")
 end
 
 local UIModule = loadstring(rawCode)()
