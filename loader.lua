@@ -65,69 +65,7 @@ Tab1:CreateButton({
         end
     end
 })
-local AutoClaimMail = false
 
--- Hàm click ngầm an toàn tuyệt đối, tương thích mọi Executor
-local function safeClick(btn)
-    if not btn then return end
-    
-    -- Cách 1: Dùng firesignal nếu Executor có hỗ trợ
-    if typeof(firesignal) == "function" then
-        pcall(function()
-            firesignal(btn.MouseButton1Click)
-        end)
-        return
-    end
-    
-    -- Cách 2: Dùng getconnections
-    if typeof(getconnections) == "function" then
-        for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
-            pcall(function()
-                if typeof(conn.Fire) == "function" then
-                    conn:Fire()
-                elseif typeof(conn.Function) == "function" then
-                    conn.Function()
-                end
-            end)
-        end
-    end
-end
-
-Tab1:CreateToggle({
-    Name = "Auto Nhận Đồ Hộp Thư",
-    Description = "Tự động bấm Claim All và nút Yes",
-    CurrentValue = false,
-    Callback = function(Value)
-        AutoClaimMail = Value
-        if AutoClaimMail then
-            task.spawn(function()
-                while AutoClaimMail do
-                    pcall(function()
-                        local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-                        if playerGui then
-                            -- 1. Bấm nút ClaimAll ngầm
-                            local mailbox = playerGui:FindFirstChild("_MACHINES") and playerGui._MACHINES:FindFirstChild("MailboxMachine")
-                            local claimAll = mailbox and mailbox.Frame.OptionsFrame:FindFirstChild("ClaimAll")
-                            if claimAll then
-                                safeClick(claimAll)
-                            end
-                            
-                            task.wait(0.5)
-                            
-                            -- 2. Bấm nút Yes ngầm
-                            local message = playerGui:FindFirstChild("Message")
-                            local yesBtn = message and message.Frame.Contents:FindFirstChild("Yes")
-                            if yesBtn then
-                                safeClick(yesBtn)
-                            end
-                        end
-                    end)
-                    task.wait(5)
-                end
-            end)
-        end
-    end
-})
 }, "Slider_Speed")
 task.wait(0.5)
 isLoaded = true
