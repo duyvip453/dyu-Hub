@@ -39,18 +39,6 @@ local Tab1 = Window:CreateTab({
 })
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
-
--- Nút Bấm (Button)
-Tab1:CreateButton({
-    Name = "Tăng Tốc Độ Chạy",
-    Description = "Đặt tốc độ nhân vật lên 50",
-    Callback = function()
-        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 50
-        end
-    end
-})
-
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
@@ -77,42 +65,60 @@ Tab1:CreateButton({
         end
     end
 })
+local AutoClaimMail = false
 
--- Nút Bật/Tắt (Toggle)
-Tab1:CreateToggle({
-    Name = "Nhảy Cao",
-    Description = "Bật/Tắt khả năng nhảy cao",
-    CurrentValue = false,
-    Callback = function(Value)
-        local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-        if hum then
-            if Value then
-                hum.JumpPower = 120
-                hum.UseJumpPower = true
-            else
-                hum.JumpPower = 50
+-- Hàm giả lập kích hoạt sự kiện Click ngầm
+local function clickBtn(btn)
+    if not btn then return end
+    if firesignal then
+        firesignal(btn.MouseButton1Click)
+    elseif getconnections then
+        for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+            if type(conn.Function) == "function" then
+                conn:Function()
             end
         end
     end
-}, "Toggle_Jump")
+end
 
--- Thanh Trượt (Slider)
-Tab1:CreateSlider({
-    Name = "Chỉnh Tốc Độ Custom",
-    Range = {16, 200},
-    Increment = 1,
-    CurrentValue = Settings.SpeedSlider, -- BẮT BUỘC PHẢI LÀ DÒNG NÀY (Không để số 16)
+Tab1:CreateToggle({
+    Name = "Auto Nhận Đồ Hộp Thư",
+    Description = "Tự động bấm Claim All và nút Yes mỗi 5s",
+    CurrentValue = false,
     Callback = function(Value)
-        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
-        end
-        
-        -- Chỉ lưu config khi script ĐÃ TẢI XONG, chống UI tự động ghi đè lúc khởi tạo
-        if isLoaded then
-            Settings.SpeedSlider = Value
-            SaveConfig()
+        AutoClaimMail = Value
+        if AutoClaimMail then
+            task.spawn(function()
+                while AutoClaimMail do
+                    local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+                    
+                    if playerGui then
+                        -- 1. Bấm nút ClaimAll ngầm
+                        local mailbox = playerGui:FindFirstChild("_MACHINES") and playerGui._MACHINES:FindFirstChild("MailboxMachine")
+                        local claimAll = mailbox and mailbox.Frame.OptionsFrame:FindFirstChild("ClaimAll")
+                        
+                        if claimAll then
+                            clickBtn(claimAll)
+                        end
+                        
+                        -- Chờ 0.5 giây để bảng thông báo xuất hiện
+                        task.wait(0.5)
+                        
+                        -- 2. Kiểm tra và bấm nút Yes ngầm nếu có
+                        local message = playerGui:FindFirstChild("Message")
+                        local yesBtn = message and message.Frame.Contents:FindFirstChild("Yes")
+                        
+                        if yesBtn then
+                            clickBtn(yesBtn)
+                        end
+                    end
+                    
+                    task.wait(5) -- Lặp lại sau mỗi 5 giây
+                end
+            end)
         end
     end
+})
 }, "Slider_Speed")
 task.wait(0.5)
 isLoaded = true
