@@ -2,11 +2,6 @@ local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 
-local Settings = { 
-    JumpToggle = false, 
-    SpeedSlider = 16 
-}
-
 local function SaveConfig()
     writefile(ConfigFileName, HttpService:JSONEncode(Settings))
 end
