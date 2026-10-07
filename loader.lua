@@ -65,7 +65,78 @@ Tab1:CreateButton({
         end
     end
 })
+local AutoClaimMail = false
 
-}, "Slider_Speed")
+local function clickButton(btn)
+    if not btn then return end
+    if typeof(firesignal) == "function" then
+        pcall(function() firesignal(btn.MouseButton1Click) end)
+        return
+    end
+    if typeof(getconnections) == "function" then
+        pcall(function()
+            for _, conn in pairs(getconnections(btn.MouseButton1Click)) do
+                if typeof(conn.Fire) == "function" then conn:Fire()
+                elseif type(conn.Function) == "function" then conn.Function() end
+            end
+        end)
+        return
+    end
+    pcall(function()
+        local vim = game:GetService("VirtualInputManager")
+        if vim and btn.AbsolutePosition then
+            local pos = btn.AbsolutePosition
+            local size = btn.AbsoluteSize
+            local x = pos.X + (size.X / 2)
+            local y = pos.Y + (size.Y / 2) + 36
+            vim:SendMouseButtonEvent(x, y, 0, true, game, 0)
+            task.wait(0.05)
+            vim:SendMouseButtonEvent(x, y, 0, false, game, 0)
+        end
+    end)
+end
+
+Tab1:CreateToggle({
+    Name = "Auto Nhận Đồ Hộp Thư",
+    Description = "Tự động nhận thư ngầm không cần mở GUI",
+    CurrentValue = false,
+    Callback = function(Value)
+        AutoClaimMail = Value
+        if AutoClaimMail then
+            task.spawn(function()
+                while AutoClaimMail do
+                    pcall(function()
+                        local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+                        if playerGui then
+                            -- 1. Tìm và bấm nút Claim All
+                            local machines = playerGui:FindFirstChild("_MACHINES")
+                            local mailbox = machines and machines:FindFirstChild("MailboxMachine")
+                            local claimAll = mailbox and mailbox:FindFirstChild("Frame") 
+                                             and mailbox.Frame:FindFirstChild("OptionsFrame") 
+                                             and mailbox.Frame.OptionsFrame:FindFirstChild("ClaimAll")
+                            
+                            if claimAll then
+                                clickButton(claimAll)
+                            end
+                            
+                            task.wait(0.5)
+                            
+                            -- 2. Tìm và bấm nút Yes
+                            local message = playerGui:FindFirstChild("Message")
+                            local yesBtn = message and message:FindFirstChild("Frame") 
+                                           and message.Frame:FindFirstChild("Contents") 
+                                           and message.Frame.Contents:FindFirstChild("Yes")
+                            
+                            if yesBtn then
+                                clickButton(yesBtn)
+                            end
+                        end
+                    end)
+                    task.wait(5)
+                end
+            end)
+        end
+    end
+})
 task.wait(0.5)
 isLoaded = true
