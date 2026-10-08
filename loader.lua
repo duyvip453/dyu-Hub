@@ -147,52 +147,51 @@ Tab1:CreateToggle({
             end)
         end
     end
-})
-Tab1:CreateToggle({
-    Name = "Auto Click Breakables (Vùng 200)",
-    Description = "Tự động gửi tín hiệu click ngẫu nhiên vào vật thể trong phạm vi 200",
+})Tab1:CreateToggle({
+    Name = "Optimize: Ẩn Orb & Lootbox",
+    Description = "Ẩn hoàn toàn hình ảnh Orb và Lootbox để giảm lag khi farm",
     CurrentValue = false,
     Callback = function(Value)
-        _G.AutoClickBreak = Value
-        if _G.AutoClickBreak then
-            task.spawn(function()
-                while _G.AutoClickBreak do
-                    pcall(function()
-                        local player = game:GetService("Players").LocalPlayer
-                        local character = player.Character or player.CharacterAdded:Wait()
-                        local rootPart = character:FindFirstChild("HumanoidRootPart")
-                        
-                        local breakablesFolder = workspace:FindFirstChild("__THINGS") and workspace.__THINGS:FindFirstChild("Breakables")
-                        
-                        if breakablesFolder and rootPart then
-                            local validTargets = {}
-                            
-                            for _, item in pairs(breakablesFolder:GetChildren()) do
-                                local targetPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
-                                if targetPart then
-                                    local distance = (rootPart.Position - targetPart.Position).Magnitude
-                                    if distance <= 200 then
-                                        table.insert(validTargets, {Item = item, Part = targetPart})
-                                    end
-                                end
-                            end
-                            
-                            if #validTargets > 0 then
-                                local chosen = validTargets[math.random(1, #validTargets)]
-                                local targetPos = chosen.Part.Position
-                                
-                                -- Giả lập tín hiệu Click chuẩn xác lên vị trí vật thể
-                                local args = {
-                                    Ray.new(rootPart.Position, (targetPos - rootPart.Position).Unit * 200),
-                                    targetPos
-                                }
-                                game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Click"):FireServer(unpack(args))
+        _G.OptimizeItems = Value
+        
+        local function toggleVisibility(folder)
+            if folder then
+                for _, item in pairs(folder:GetChildren()) do
+                    -- Ẩn hoặc xóa phần hiển thị hình ảnh của vật phẩm
+                    if item:IsA("BasePart") then
+                        item.Transparency = _G.OptimizeItems and 1 or 0
+                        item.CanCollide = false
+                    elseif item:IsA("Model") then
+                        for _, part in pairs(item:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.Transparency = _G.OptimizeItems and 1 or 0
+                                part.CanCollide = false
                             end
                         end
+                    end
+                end
+            end
+        end
+
+        -- Lắng nghe sự kiện vật phẩm mới rơi ra để ẩn ngay lập tức
+        local things = workspace:FindFirstChild("__THINGS")
+        local orbsFolder = things and things:FindFirstChild("Orbs")
+        local lootbagsFolder = things and things:FindFirstChild("Lootbags")
+
+        if _G.OptimizeItems then
+            task.spawn(function()
+                while _G.OptimizeItems do
+                    pcall(function()
+                        toggleVisibility(orbsFolder)
+                        toggleVisibility(lootbagsFolder)
                     end)
-                    task.wait(0.25)
+                    task.wait(0.5)
                 end
             end)
+        else
+            -- Khôi phục lại hiển thị nếu tắt Toggle
+            toggleVisibility(orbsFolder)
+            toggleVisibility(lootbagsFolder)
         end
     end
 })
