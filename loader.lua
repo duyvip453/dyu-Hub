@@ -54,209 +54,89 @@ local Tab1 = Window:CreateTab({
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
-local PotionIDs = {
-    ["Treasure Hunter Potion"] = "Treasure Hunter",
-    ["Lucky Eggs Potion"] = "Lucky Egg",
-    ["Coins Potion"] = "Coins",
-    ["Damage Potion"] = "Damage"
-}
+local Player = game.Players.LocalPlayer
 
-local SelectedPotion = "Treasure Hunter Potion"
-local SelectedTier = 1
-local SelectedAmount = 1
-local IsConsuming = false
+-- 1. Tạo một bảng Paragraph trên Tab1 để làm Dashboard
+local Dashboard = Tab1:CreateParagraph({
+    Title = "🏆 ĐANG TẢI RANK...",
+    Content = "Đang đồng bộ dữ liệu nhiệm vụ với game..."
+})
 
--- Hàm lấy UUID an toàn (không làm treo/lỗi script chính)
-local function getPotionUUID(internalId, tier)
-    local getSuccess, SaveData = pcall(function()
-        local saveScript = ReplicatedStorage:WaitForChild("Library", 5):WaitForChild("Client", 5):WaitForChild("Save", 5)
-        return require(saveScript).Get()
-    end)
+-- 2. Hàm toán học để vẽ thanh tiến độ (Ví dụ: [██████░░░░] 60%)
+local function createProgressBar(progressText)
+    -- Xóa dấu phẩy nếu có (VD: 1,200/5,000 -> 1200/5000)
+    local cleanText = string.gsub(progressText or "", ",", "")
+    -- Tách 2 con số hiện tại và tổng số
+    local currentStr, maxStr = string.match(cleanText, "(%d+)/(%d+)")
     
-    if getSuccess and SaveData and SaveData.Inventory and SaveData.Inventory.Potion then
-        for uuid, item in pairs(SaveData.Inventory.Potion) do
-            local itemTier = item.tn or 1
-            if item.id == internalId and itemTier == tier then
-                return uuid, (item._am or 1)
-            end
+    local percent = 0
+    if currentStr and maxStr then
+        local current = tonumber(currentStr) or 0
+        local max = tonumber(maxStr) or 1
+        if max > 0 then
+            percent = math.clamp(current / max, 0, 1)
         end
     end
-    return nil, 0
+
+    -- Độ dài của thanh tiến độ (bạn có thể tăng giảm số 20 này nếu muốn thanh dài hay ngắn)
+    local barLength = 20 
+    local filled = math.floor(percent * barLength)
+    local empty = barLength - filled
+    
+    -- Lắp ráp các ký tự thành thanh hoàn chỉnh
+    local bar = string.rep("█", filled) .. string.rep("░", empty)
+    local percentText = string.format("%d%%", math.floor(percent * 100))
+    
+    return string.format("%s %s  (%s)", bar, percentText, progressText)
 end
 
--- 1. Dropdown Chọn Thuốc
-Tab1:CreateDropdown({
-    Name = "Chọn Loại Thuốc",
-    Options = {"Treasure Hunter Potion", "Lucky Eggs Potion", "Coins Potion", "Damage Potion"},
-    Default = "Treasure Hunter Potion",
-    CurrentOption = "Treasure Hunter Potion",
-    Callback = function(Option)
-        if type(Option) == "table" then
-            SelectedPotion = Option[1] or "Treasure Hunter Potion"
-        else
-            SelectedPotion = Option
-        end
-    end
-})
-
--- 2. Ô Nhập Cấp Độ (Tier)
-Tab1:CreateInput({
-    Name = "Cấp Độ Thuốc (Tier)",
-    PlaceholderText = "Nhập cấp độ (VD: 1 đến 11)",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        local num = tonumber(Text)
-        if num then
-            SelectedTier = num
-        else
-            warn("[DYU HUB]: Cấp độ phải là chữ số!")
-        end
-    end
-})
-
--- 3. Ô Nhập Số Lượng Cần Uống
-Tab1:CreateInput({
-    Name = "Số Lượng Cần Uống",
-    PlaceholderText = "Nhập số lượng...",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        local num = tonumber(Text)
-        if num then
-            SelectedAmount = num
-        else
-            warn("[DYU HUB]: Số lượng phải là chữ số!")
-        end
-    end
-})
-
--- 4. Nút Kích Hoạt Auto Uống Thuốc
-Tab1:CreateButton({
-    Name = "Tiến Hành Uống Thuốc",
-    Callback = function()
-        if IsConsuming then
-            warn("[DYU HUB]: Đang trong quá trình uống thuốc, vui lòng đợi!")
-            return
-        end
-        
-        task.spawn(function()
-            IsConsuming = true
-            local internalId = PotionIDs[SelectedPotion]
-            local network = ReplicatedStorage:FindFirstChild("Network")
-            local consumeRemote = network and network:FindFirstChild("Potions: Consume")
-            
-            if not consumeRemote then
-                warn("[DYU HUB]: Lỗi - Không tìm thấy Remote 'Potions: Consume'!")
-                IsConsuming = false
-                return
-            end
-
-            for i = 1, SelectedAmount do
-                local uuid, currentAmount = getPotionUUID(internalId, SelectedTier)
-                
-                if not uuid or currentAmount <= 0 then
-                    warn("[DYU HUB]: Đã hết " .. tostring(SelectedPotion) .. " Cấp " .. tostring(SelectedTier) .. " trong kho đồ!")
-                    break
-                end
-                
-                local execSuccess = pcall(function()
-                    consumeRemote:FireServer(uuid, 1)
-                end)
-
-                if execSuccess then
-                    print(string.format("[DYU HUB]: Đã dùng (%d/%d) %s [Tier %d]", i, SelectedAmount, SelectedPotion, SelectedTier))
-                else
-                    warn("[DYU HUB]: Lỗi khi gửi lệnh uống thuốc!")
-                end
-                
-                if i < SelectedAmount then
-                    task.wait(2)
-                end
-            end
-            print("[DYU HUB]: Đã hoàn tất quá trình sử dụng thuốc.")
-            IsConsuming = false
-        end)
-    end
-})
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Network = ReplicatedStorage:WaitForChild("Network")
-
-local SelectedFruitAmount = 1
-local IsEatingFruits = false
-
--- Danh sách ID quả chuẩn trong game
-local ValidFruits = {
-    ["Watermelon"] = true,
-    ["Apple"] = true,
-    ["Rainbow"] = true,
-    ["Pineapple"] = true,
-    ["Orange"] = true,
-    ["Banana"] = true
-}
-
--- Hàm lấy UUID của 1 quả ngẫu nhiên đang có trong kho đồ
-local function getRandomFruitUUID()
-    local getSuccess, SaveData = pcall(function()
-        local saveScript = ReplicatedStorage:WaitForChild("Library", 5):WaitForChild("Client", 5):WaitForChild("Save", 5)
-        return require(saveScript).Get()
-    end)
+-- 3. Vòng lặp chạy ngầm để cập nhật dữ liệu liên tục mỗi 1 giây
+task.spawn(function()
+    local Difficulties = {"Easy", "Medium", "Hard", "Extreme"}
     
-    if getSuccess and SaveData and SaveData.Inventory and SaveData.Inventory.Fruit then
-        local availableUUIDs = {}
-        for uuid, item in pairs(SaveData.Inventory.Fruit) do
-            if ValidFruits[item.id] and (item._am or 1) > 0 then
-                table.insert(availableUUIDs, uuid)
-            end
-        end
-        if #availableUUIDs > 0 then
-            return availableUUIDs[math.random(1, #availableUUIDs)]
-        end
-    end
-    return nil
-end
-
--- 1. Ô nhập số lượng quả cần ăn
-Tab1:CreateInput({
-    Name = "Số Lượng Quả Ăn Ngẫu Nhiên",
-    PlaceholderText = "Nhập số lượng...",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        SelectedFruitAmount = tonumber(Text) or 1
-    end
-})
-
--- 2. Nút kích hoạt ăn quả ngẫu nhiên
-Tab1:CreateButton({
-    Name = "Bắt Đầu Ăn Quả Ngẫu Nhiên",
-    Callback = function()
-        if IsEatingFruits then return end
-        
-        task.spawn(function()
-            IsEatingFruits = true
-            local consumeRemote = Network:FindFirstChild("Fruits: Consume")
+    while task.wait(1) do
+        -- Dùng pcall để script không bao giờ bị lỗi nếu game ẩn UI hoặc chuyển map
+        pcall(function()
+            local PlayerGui = Player:FindFirstChild("PlayerGui")
+            if not PlayerGui then return end
             
-            if not consumeRemote then
-                IsEatingFruits = false
-                return
+            local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
+            if not GoalsSide or not GoalsSide:FindFirstChild("Frame") then return end
+            
+            -- LẤY RANK
+            local rankText = "N/A"
+            local rankTitleObj = GoalsSide.Frame.Top:FindFirstChild("Title")
+            if rankTitleObj then
+                rankText = rankTitleObj.Text
             end
-
-            for i = 1, SelectedFruitAmount do
-                local uuid = getRandomFruitUUID()
-                if not uuid then break end -- Dừng nếu hết quả trong kho
-                
-                pcall(function()
-                    consumeRemote:FireServer(uuid, 1)
-                end)
-                
-                if i < SelectedFruitAmount then
-                    task.wait(0.2) -- Thời gian chờ giữa các lần ăn
+            
+            -- LẤY 4 NHIỆM VỤ & TẠO THANH TIẾN ĐỘ
+            local questContent = ""
+            local QuestsHolder = GoalsSide.Frame.Quests.QuestsGradient.QuestsHolder
+            
+            for _, diff in ipairs(Difficulties) do
+                local DiffFrame = QuestsHolder:FindFirstChild(diff)
+                if DiffFrame then
+                    local titleText = DiffFrame:FindFirstChild("Title") and DiffFrame.Title.Text or "Đang tải..."
+                    local progressText = DiffFrame:FindFirstChild("Progress") and DiffFrame.Progress.Text or "0/0"
+                    
+                    -- Vẽ thanh bar
+                    local visualBar = createProgressBar(progressText)
+                    
+                    -- Nối chuỗi để hiển thị
+                    questContent = questContent .. string.format("📌 [%s] %s\n%s\n\n", string.upper(diff), titleText, visualBar)
                 end
             end
             
-            IsEatingFruits = false
+            -- CẬP NHẬT LÊN UI
+            Dashboard:Set({
+                Title = "🏆 RANK HIỆN TẠI: " .. string.upper(rankText),
+                Content = questContent
+            })
         end)
     end
-})
+end)
+
 
 task.wait(0.5)
 isLoaded = true
