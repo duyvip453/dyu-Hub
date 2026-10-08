@@ -54,79 +54,122 @@ local Tab1 = Window:CreateTab({
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
-local Player = game.Players.LocalPlayer
+--============================================================
+-- KHU VỰC: BẢNG RANK & NHIỆM VỤ (nằm NGAY TRONG TAB 1)
+-- Đoạn này thay thế toàn bộ khối "1. Tạo bảng hiển thị" và
+-- "2. Vòng lặp cập nhật" cũ trong loader.lua.
+--============================================================
 
--- 1. Tạo bảng hiển thị
-local Dashboard = Tab1:CreateParagraph({
-    Title = "🏆 ĐANG TẢI RANK...",
-    Content = "Đang đồng bộ dữ liệu..."
+--------------------------------------------------------------
+-- BƯỚC 1: TẠO KHUNG HIỂN THỊ RANK (to, rõ, nằm trên cùng)
+--------------------------------------------------------------
+-- Dùng Paragraph thay vì Label vì Paragraph đã được xác nhận
+-- cập nhật được bằng :Set(), tránh rủi ro Label không hỗ trợ
+local khungRank = Tab1:CreateParagraph({
+	Title = "🏆 RANK",
+	Content = "Đang đồng bộ dữ liệu..."
 })
 
--- 2. Vòng lặp cập nhật (Code tối giản, chống lỗi tuyệt đối)
+-- Đường kẻ + tiêu đề phụ để tách rõ khu rank với khu nhiệm vụ
+Tab1:CreateSection("Nhiệm vụ")
+Tab1:CreateDivider()
+
+--------------------------------------------------------------
+-- BƯỚC 2: TẠO 4 KHUNG RIÊNG CHO 4 CẤP ĐỘ NHIỆM VỤ
+--------------------------------------------------------------
+-- Mỗi cấp độ 1 khung riêng (không nhồi chung 1 khối chữ như cũ)
+-- để nhìn vào là thấy ngay nhiệm vụ nào đang ở đâu
+
+local danhSachCapDoQuest = { "Easy", "Medium", "Hard", "Extreme" }
+
+-- Bảng lưu khung Paragraph của từng cấp độ, để lát cập nhật
+local khungTheoCapDo = {}
+
+for _, tenCapDo in ipairs(danhSachCapDoQuest) do
+	khungTheoCapDo[tenCapDo] = Tab1:CreateParagraph({
+		Title = "📌 " .. tenCapDo .. ": Đang tải...",
+		Content = "Đang đồng bộ..."
+	})
+end
+
+--------------------------------------------------------------
+-- BƯỚC 3: HÀM TẠO THANH TIẾN ĐỘ BẰNG KÝ TỰ (vì Luna không có
+-- sẵn thanh progress bar dạng đồ họa)
+--------------------------------------------------------------
+local function taoThanhTienDo(phanTram, doDai)
+	doDai = doDai or 20
+	local soOChay = math.floor(phanTram * doDai)
+	return string.rep("█", soOChay) .. string.rep("░", doDai - soOChay)
+end
+
+--------------------------------------------------------------
+-- BƯỚC 4: VÒNG LẶP CẬP NHẬT (giữ cách làm cũ: mỗi giây 1 lần,
+-- bọc pcall để lỗi vặt không làm đứng cả vòng lặp)
+--------------------------------------------------------------
 task.spawn(function()
-    while task.wait(1) do
-        local success, err = pcall(function()
-            local PlayerGui = Player:FindFirstChild("PlayerGui")
-            if not PlayerGui then return end
-            
-            local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
-            if not GoalsSide then return end
+	while task.wait(1) do
+		local thanhCong, loi = pcall(function()
+			local nguoiChoi = game.Players.LocalPlayer
+			local giaoDienGoc = nguoiChoi:FindFirstChild("PlayerGui")
+			if not giaoDienGoc then return end
 
-            -- TÌM RANK (Tự động quét tìm frame "Top")
-            local rankText = "N/A"
-            local topFrame = GoalsSide:FindFirstChild("Top", true)
-            if topFrame and topFrame:FindFirstChild("Title") then
-                rankText = topFrame.Title.Text
-            end
+			local khungGoalsSide = giaoDienGoc:FindFirstChild("GoalsSide")
+			if not khungGoalsSide then return end
 
-            -- TÌM NHIỆM VỤ (Tự động quét tìm "QuestsHolder")
-            local contentText = ""
-            local questsHolder = GoalsSide:FindFirstChild("QuestsHolder", true)
-            
-            if questsHolder then
-                -- Lọc đúng 4 nhiệm vụ theo tên
-                local diffs = {"Easy", "Medium", "Hard", "Extreme"}
-                for _, diff in ipairs(diffs) do
-                    local frame = questsHolder:FindFirstChild(diff)
-                    if frame then
-                        local tObj = frame:FindFirstChild("Title")
-                        local pObj = frame:FindFirstChild("Progress")
-                        
-                        local titleText = tObj and tObj.Text or "Đang tải..."
-                        local progText = pObj and pObj.Text or "0/0"
-                        
-                        -- Xử lý thanh tiến độ
-                        local cleanProg = string.gsub(progText, ",", "")
-                        local cur, max = string.match(cleanProg, "(%d+)/(%d+)")
-                        local percent = 0
-                        if cur and max and tonumber(max) > 0 then
-                            percent = math.clamp(tonumber(cur) / tonumber(max), 0, 1)
-                        end
-                        
-                        local filled = math.floor(percent * 20)
-                        local bar = string.rep("█", filled) .. string.rep("░", 20 - filled)
-                        
-                        contentText = contentText .. string.format("📌 [%s] %s\n%s %d%%  (%s)\n\n", string.upper(diff), titleText, bar, math.floor(percent * 100), progText)
-                    end
-                end
-            end
+			----------------------------------------------------
+			-- CẬP NHẬT RANK
+			----------------------------------------------------
+			local chuRank = "N/A"
+			local khungTop = khungGoalsSide:FindFirstChild("Top", true)
+			if khungTop and khungTop:FindFirstChild("Title") then
+				chuRank = khungTop.Title.Text
+			end
+			khungRank:Set({
+				Title = "🏆 RANK",
+				Content = chuRank
+			})
 
-            if contentText == "" then
-                contentText = "Đang chờ game hiển thị nhiệm vụ..."
-            end
+			----------------------------------------------------
+			-- CẬP NHẬT TỪNG CẤP ĐỘ NHIỆM VỤ
+			----------------------------------------------------
+			local khungCacQuest = khungGoalsSide:FindFirstChild("QuestsHolder", true)
+			if not khungCacQuest then return end
 
-            -- CẬP NHẬT GIAO DIỆN
-            Dashboard:Set({
-                Title = "🏆 RANK HIỆN TẠI: " .. string.upper(rankText),
-                Content = contentText
-            })
-        end)
-        
-        -- Nếu có lỗi không lường trước, báo ra F9 để dễ bắt bệnh
-        if not success then
-            warn("Lỗi Dashboard: ", err)
-        end
-    end
+			for _, tenCapDo in ipairs(danhSachCapDoQuest) do
+				local khungQuestGoc = khungCacQuest:FindFirstChild(tenCapDo)
+				if khungQuestGoc then
+					local oTen = khungQuestGoc:FindFirstChild("Title")
+					local oTienDo = khungQuestGoc:FindFirstChild("Progress")
+
+					local tenNhiemVu = oTen and oTen.Text or "Đang tải..."
+					local chuTienDo = oTienDo and oTienDo.Text or "0/0"
+
+					-- Tách số hiện tại / số tối đa, bỏ dấu phẩy nếu có
+					local chuoiSach = string.gsub(chuTienDo, ",", "")
+					local soHienTai, soToiDa = string.match(chuoiSach, "(%d+)/(%d+)")
+					soHienTai = tonumber(soHienTai) or 0
+					soToiDa = tonumber(soToiDa) or 0
+
+					local phanTram = 0
+					if soToiDa > 0 then
+						phanTram = math.clamp(soHienTai / soToiDa, 0, 1)
+					end
+
+					local noiDungHienThi = taoThanhTienDo(phanTram)
+						.. string.format(" %d%%  (%s)", math.floor(phanTram * 100), chuTienDo)
+
+					khungTheoCapDo[tenCapDo]:Set({
+						Title = "📌 " .. tenCapDo .. ": " .. tenNhiemVu,
+						Content = noiDungHienThi
+					})
+				end
+			end
+		end)
+
+		if not thanhCong then
+			warn("Lỗi Bảng Rank/Quest: ", loi)
+		end
+	end
 end)
 
 task.wait(0.5)
