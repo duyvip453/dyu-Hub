@@ -53,7 +53,7 @@ local Tab1 = Window:CreateTab({
 -- Cấu hình dữ liệu Thuốc
 local PotionIDs = {
     ["Treasure Hunter Potion"] = "Treasure Hunter",
-    ["Lucky Eggs Potion"] = "Lucky Eggs",
+    ["Lucky Eggs Potion"] = "Lucky Egg",
     ["Coins Potion"] = "Coins",
     ["Damage Potion"] = "Damage"
 }
