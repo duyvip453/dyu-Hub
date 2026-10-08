@@ -56,89 +56,78 @@ local Tab1 = Window:CreateTab({
 -- Cấu hình dữ liệu Thuốc
 local Player = game.Players.LocalPlayer
 
--- 1. Tạo một bảng Paragraph trên Tab1 để làm Dashboard
+-- 1. Tạo bảng hiển thị
 local Dashboard = Tab1:CreateParagraph({
     Title = "🏆 ĐANG TẢI RANK...",
-    Content = "Đang đồng bộ dữ liệu nhiệm vụ với game..."
+    Content = "Đang đồng bộ dữ liệu..."
 })
 
--- 2. Hàm toán học để vẽ thanh tiến độ (Ví dụ: [██████░░░░] 60%)
-local function createProgressBar(progressText)
-    -- Xóa dấu phẩy nếu có (VD: 1,200/5,000 -> 1200/5000)
-    local cleanText = string.gsub(progressText or "", ",", "")
-    -- Tách 2 con số hiện tại và tổng số
-    local currentStr, maxStr = string.match(cleanText, "(%d+)/(%d+)")
-    
-    local percent = 0
-    if currentStr and maxStr then
-        local current = tonumber(currentStr) or 0
-        local max = tonumber(maxStr) or 1
-        if max > 0 then
-            percent = math.clamp(current / max, 0, 1)
-        end
-    end
-
-    -- Độ dài của thanh tiến độ (bạn có thể tăng giảm số 20 này nếu muốn thanh dài hay ngắn)
-    local barLength = 20 
-    local filled = math.floor(percent * barLength)
-    local empty = barLength - filled
-    
-    -- Lắp ráp các ký tự thành thanh hoàn chỉnh
-    local bar = string.rep("█", filled) .. string.rep("░", empty)
-    local percentText = string.format("%d%%", math.floor(percent * 100))
-    
-    return string.format("%s %s  (%s)", bar, percentText, progressText)
-end
-
--- 3. Vòng lặp chạy ngầm để cập nhật dữ liệu liên tục mỗi 1 giây
+-- 2. Vòng lặp cập nhật (Code tối giản, chống lỗi tuyệt đối)
 task.spawn(function()
     while task.wait(1) do
-        pcall(function()
+        local success, err = pcall(function()
             local PlayerGui = Player:FindFirstChild("PlayerGui")
             if not PlayerGui then return end
             
             local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
-            if not GoalsSide or not GoalsSide:FindFirstChild("Frame") then return end
-            
-            -- 1. LẤY RANK
+            if not GoalsSide then return end
+
+            -- TÌM RANK (Tự động quét tìm frame "Top")
             local rankText = "N/A"
-            local rankTitleObj = GoalsSide.Frame.Top:FindFirstChild("Title")
-            if rankTitleObj then
-                rankText = rankTitleObj.Text
+            local topFrame = GoalsSide:FindFirstChild("Top", true)
+            if topFrame and topFrame:FindFirstChild("Title") then
+                rankText = topFrame.Title.Text
             end
+
+            -- TÌM NHIỆM VỤ (Tự động quét tìm "QuestsHolder")
+            local contentText = ""
+            local questsHolder = GoalsSide:FindFirstChild("QuestsHolder", true)
             
-            -- 2. LẤY 4 NHIỆM VỤ (Đoạn mới tự động quét)
-            local questContent = ""
-            local QuestsHolder = GoalsSide.Frame.Quests.QuestsGradient.QuestsHolder
-            
-            for _, DiffFrame in ipairs(QuestsHolder:GetChildren()) do
-                if DiffFrame:IsA("GuiObject") then
-                    local diffName = DiffFrame.Name
-                    local titleObj = DiffFrame:FindFirstChild("Title")
-                    local progressObj = DiffFrame:FindFirstChild("Progress")
-                    
-                    local titleText = titleObj and titleObj.Text or "Chưa có tên"
-                    local progressText = progressObj and progressObj.Text or "0/0"
-                    
-                    local visualBar = createProgressBar(progressText)
-                    questContent = questContent .. string.format("📌 [%s] %s\n%s\n\n", string.upper(diffName), titleText, visualBar)
+            if questsHolder then
+                -- Lọc đúng 4 nhiệm vụ theo tên
+                local diffs = {"Easy", "Medium", "Hard", "Extreme"}
+                for _, diff in ipairs(diffs) do
+                    local frame = questsHolder:FindFirstChild(diff)
+                    if frame then
+                        local tObj = frame:FindFirstChild("Title")
+                        local pObj = frame:FindFirstChild("Progress")
+                        
+                        local titleText = tObj and tObj.Text or "Đang tải..."
+                        local progText = pObj and pObj.Text or "0/0"
+                        
+                        -- Xử lý thanh tiến độ
+                        local cleanProg = string.gsub(progText, ",", "")
+                        local cur, max = string.match(cleanProg, "(%d+)/(%d+)")
+                        local percent = 0
+                        if cur and max and tonumber(max) > 0 then
+                            percent = math.clamp(tonumber(cur) / tonumber(max), 0, 1)
+                        end
+                        
+                        local filled = math.floor(percent * 20)
+                        local bar = string.rep("█", filled) .. string.rep("░", 20 - filled)
+                        
+                        contentText = contentText .. string.format("📌 [%s] %s\n%s %d%%  (%s)\n\n", string.upper(diff), titleText, bar, math.floor(percent * 100), progText)
+                    end
                 end
             end
 
-            -- Cảnh báo nếu không tìm thấy ô nhiệm vụ
-            if questContent == "" then
-                questContent = "⚠️ Không tìm thấy khung nhiệm vụ nào trong QuestsHolder!"
+            if contentText == "" then
+                contentText = "Đang chờ game hiển thị nhiệm vụ..."
             end
-            
-            -- 3. CẬP NHẬT LÊN DASHBOARD
+
+            -- CẬP NHẬT GIAO DIỆN
             Dashboard:Set({
                 Title = "🏆 RANK HIỆN TẠI: " .. string.upper(rankText),
-                Content = questContent
+                Content = contentText
             })
         end)
+        
+        -- Nếu có lỗi không lường trước, báo ra F9 để dễ bắt bệnh
+        if not success then
+            warn("Lỗi Dashboard: ", err)
+        end
     end
 end)
-
 
 task.wait(0.5)
 isLoaded = true
