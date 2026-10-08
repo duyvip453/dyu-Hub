@@ -1,36 +1,53 @@
 local HttpService = game:GetService("HttpService")
-local Player = game.Players.LocalPlayer
-local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
+local Player = game:GetService("Players").LocalPlayer
+
+local Settings = { 
+    JumpToggle = false, 
+    SpeedSlider = 16 
+}
+
+local ConfigFileName = "DYUHUB_" .. tostring(game.PlaceId) .. "_" .. tostring(Player.UserId) .. ".json"
 
 local function SaveConfig()
-    writefile(ConfigFileName, HttpService:JSONEncode(Settings))
+    pcall(function()
+        if writefile then writefile(ConfigFileName, HttpService:JSONEncode(Settings)) end
+    end)
 end
 
 local function LoadConfig()
-    if isfile(ConfigFileName) then
-        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
-        -- Kiểm tra chắc chắn dữ liệu đọc ra phải là 1 bảng (table) thì mới lấy dữ liệu
-        if success and type(decoded) == "table" then
-            for k, v in pairs(decoded) do Settings[k] = v end
+    if isfile and isfile(ConfigFileName) then
+        local success, result = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
+        if success and type(result) == "table" then
+            for k, v in pairs(result) do Settings[k] = v end
         else
-            SaveConfig() -- Nếu file bị hỏng (nil) sẽ tự động tạo lại file mới
+            SaveConfig()
         end
     else
-LoadConfig()
-local isLoaded = false
--- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
-local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
-local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
-if not success or not rawCode or rawCode == "" then
-    return warn("[DYU HUB]: Không thể tải background UI từ GitHub!")
+        SaveConfig()
+    end
 end
 
-local UIModule = loadstring(rawCode)()
+LoadConfig()
 
--- 2. Khởi tạo Cửa sổ giao diện chính từ Background
+local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/main/backgroud.lua"
+local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
+
+if not success or not rawCode or string.find(rawCode, "404: Not Found") then
+    return warn("[DYU HUB]: Không thể tải background UI từ GitHub! Kiểm tra lại link file.")
+end
+
+local loadFunc, err = loadstring(rawCode)
+if not loadFunc then
+    return warn("[DYU HUB]: File backgroud.lua bị lỗi code: " .. tostring(err))
+end
+
+local UIModule = loadFunc()
+if type(UIModule) ~= "table" or not UIModule.Init then
+    return warn("[DYU HUB]: File background không trả về thư viện hợp lệ!")
+end
+
 local Window = UIModule:Init()
 
--- 3. Tạo Các Tab (Danh mục lớn)
 local Tab1 = Window:CreateTab({
     Name = "Người Chơi",
     Icon = "person",
@@ -38,23 +55,16 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 
--- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
--- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
     Description = "Mở trực tiếp MailboxMachine trong _MACHINES",
     Callback = function()
-        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        local playerGui = Player:FindFirstChild("PlayerGui")
         local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
         local mailGui = machines and machines:FindFirstChild("MailboxMachine")
 
         if machines and mailGui then
-            -- Nếu _MACHINES là ScreenGui, đảm bảo lớp ngoài luôn bật
-            if machines:IsA("ScreenGui") then
-                machines.Enabled = true
-            end
-
-            -- Bật/tắt MailboxMachine (Nhấn 1 lần mở, nhấn 1 lần đóng)
+            if machines:IsA("ScreenGui") then machines.Enabled = true end
             if mailGui:IsA("ScreenGui") then
                 mailGui.Enabled = not mailGui.Enabled
             else
@@ -66,14 +76,11 @@ Tab1:CreateButton({
     end
 })
 
-
 local AutoClaimMail = false
-
 local function clickButton(btn)
     if not btn then return end
     if typeof(firesignal) == "function" then
-        pcall(function() firesignal(btn.MouseButton1Click) end)
-        return
+        pcall(function() firesignal(btn.MouseButton1Click) end) return
     end
     if typeof(getconnections) == "function" then
         pcall(function()
@@ -81,8 +88,7 @@ local function clickButton(btn)
                 if typeof(conn.Fire) == "function" then conn:Fire()
                 elseif type(conn.Function) == "function" then conn.Function() end
             end
-        end)
-        return
+        end) return
     end
     pcall(function()
         local vim = game:GetService("VirtualInputManager")
@@ -108,30 +114,22 @@ Tab1:CreateToggle({
             task.spawn(function()
                 while AutoClaimMail do
                     pcall(function()
-                        local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+                        local playerGui = Player:FindFirstChild("PlayerGui")
                         if playerGui then
-                            -- 1. Tìm và bấm nút Claim All
                             local machines = playerGui:FindFirstChild("_MACHINES")
                             local mailbox = machines and machines:FindFirstChild("MailboxMachine")
                             local claimAll = mailbox and mailbox:FindFirstChild("Frame") 
                                              and mailbox.Frame:FindFirstChild("OptionsFrame") 
                                              and mailbox.Frame.OptionsFrame:FindFirstChild("ClaimAll")
-                            
-                            if claimAll then
-                                clickButton(claimAll)
-                            end
+                            if claimAll then clickButton(claimAll) end
                             
                             task.wait(0.5)
                             
-                            -- 2. Tìm và bấm nút Yes
                             local message = playerGui:FindFirstChild("Message")
                             local yesBtn = message and message:FindFirstChild("Frame") 
                                            and message.Frame:FindFirstChild("Contents") 
                                            and message.Frame.Contents:FindFirstChild("Yes")
-                            
-                            if yesBtn then
-                                clickButton(yesBtn)
-                            end
+                            if yesBtn then clickButton(yesBtn) end
                         end
                     end)
                     task.wait(5)
@@ -140,5 +138,5 @@ Tab1:CreateToggle({
         end
     end
 })
-task.wait(0.5)
-isLoaded = true
+
+local isLoaded = true
