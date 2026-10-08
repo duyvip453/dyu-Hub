@@ -42,7 +42,19 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
+local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
+local RankTextObject
+for _,object in next, CoreGui:GetDescendants() do
+    if object:IsA("TextLabel") and object.Text == "Đang tải Rank..." then
+        RankTextObject = object
+        break
+    end
+end
+if RankTextObject then
+    RankTextObject.TextSize = 28
+    RankTextObject.Font = Enum.Font.GothamBold
+end
 Tab1:CreateSection("Nhiệm vụ")
 local EasyLabel = Tab1:CreateLabel({Text="Easy: Đang tải...",Style=1})
 local MediumLabel = Tab1:CreateLabel({Text="Medium: Đang tải...",Style=1})
