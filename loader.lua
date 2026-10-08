@@ -149,14 +149,14 @@ Tab1:CreateToggle({
     end
 })
 Tab1:CreateToggle({
-    Name = "Auto Farm Breakables (Phạm vi 200)",
-    Description = "Tự động tấn công các rương/vật thể trong phạm vi 200 studs",
+    Name = "Auto Farm Breakables (Vùng 200)",
+    Description = "Tự động đánh các vật thể ngẫu nhiên trong bán kính 200",
     CurrentValue = false,
     Callback = function(Value)
-        _G.AutoFarmBreakables = Value
-        if _G.AutoFarmBreakables then
+        _G.AutoFarmRange = Value
+        if _G.AutoFarmRange then
             task.spawn(function()
-                while _G.AutoFarmBreakables do
+                while _G.AutoFarmRange do
                     pcall(function()
                         local player = game:GetService("Players").LocalPlayer
                         local character = player.Character or player.CharacterAdded:Wait()
@@ -165,19 +165,29 @@ Tab1:CreateToggle({
                         local breakablesFolder = workspace:FindFirstChild("__THINGS") and workspace.__THINGS:FindFirstChild("Breakables")
                         
                         if breakablesFolder and rootPart then
+                            local validTargets = {}
+                            
+                            -- 1. Quét toàn bộ vật thể trong thư mục
                             for _, item in pairs(breakablesFolder:GetChildren()) do
-                                -- Kiểm tra nếu vật thể có phần gốc để đo khoảng cách
                                 local targetPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
                                 if targetPart then
                                     local distance = (rootPart.Position - targetPart.Position).Magnitude
                                     
-                                    -- Lọc trong phạm vi <= 200 studs
+                                    -- Lọc các vật thể nằm trong phạm vi 200 studs
                                     if distance <= 200 then
-                                        local args = {
-                                            item.Name -- ID của vật thể chính là tên của model trong thư mục Breakables
-                                        }
-                                        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Breakables_PlayerDealDamage"):FireServer(unpack(args))
+                                        table.insert(validTargets, item)
                                     end
+                                end
+                            end
+                            
+                            -- 2. Nếu tìm thấy vật thể trong vùng, chọn ngẫu nhiên để đánh
+                            if #validTargets > 0 then
+                                local randomTarget = validTargets[math.random(1, #validTargets)]
+                                if randomTarget then
+                                    local args = {
+                                        randomTarget.Name
+                                    }
+                                    game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Breakables_PlayerDealDamage"):FireServer(unpack(args))
                                 end
                             end
                         end
