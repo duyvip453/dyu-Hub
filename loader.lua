@@ -92,10 +92,7 @@ end
 
 -- 3. Vòng lặp chạy ngầm để cập nhật dữ liệu liên tục mỗi 1 giây
 task.spawn(function()
-    local Difficulties = {"Easy", "Medium", "Hard", "Extreme"}
-    
     while task.wait(1) do
-        -- Dùng pcall để script không bao giờ bị lỗi nếu game ẩn UI hoặc chuyển map
         pcall(function()
             local PlayerGui = Player:FindFirstChild("PlayerGui")
             if not PlayerGui then return end
@@ -103,32 +100,37 @@ task.spawn(function()
             local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
             if not GoalsSide or not GoalsSide:FindFirstChild("Frame") then return end
             
-            -- LẤY RANK
+            -- 1. LẤY RANK
             local rankText = "N/A"
             local rankTitleObj = GoalsSide.Frame.Top:FindFirstChild("Title")
             if rankTitleObj then
                 rankText = rankTitleObj.Text
             end
             
-            -- LẤY 4 NHIỆM VỤ & TẠO THANH TIẾN ĐỘ
+            -- 2. LẤY 4 NHIỆM VỤ (Đoạn mới tự động quét)
             local questContent = ""
             local QuestsHolder = GoalsSide.Frame.Quests.QuestsGradient.QuestsHolder
             
-            for _, diff in ipairs(Difficulties) do
-                local DiffFrame = QuestsHolder:FindFirstChild(diff)
-                if DiffFrame then
-                    local titleText = DiffFrame:FindFirstChild("Title") and DiffFrame.Title.Text or "Đang tải..."
-                    local progressText = DiffFrame:FindFirstChild("Progress") and DiffFrame.Progress.Text or "0/0"
+            for _, DiffFrame in ipairs(QuestsHolder:GetChildren()) do
+                if DiffFrame:IsA("GuiObject") then
+                    local diffName = DiffFrame.Name
+                    local titleObj = DiffFrame:FindFirstChild("Title")
+                    local progressObj = DiffFrame:FindFirstChild("Progress")
                     
-                    -- Vẽ thanh bar
+                    local titleText = titleObj and titleObj.Text or "Chưa có tên"
+                    local progressText = progressObj and progressObj.Text or "0/0"
+                    
                     local visualBar = createProgressBar(progressText)
-                    
-                    -- Nối chuỗi để hiển thị
-                    questContent = questContent .. string.format("📌 [%s] %s\n%s\n\n", string.upper(diff), titleText, visualBar)
+                    questContent = questContent .. string.format("📌 [%s] %s\n%s\n\n", string.upper(diffName), titleText, visualBar)
                 end
             end
+
+            -- Cảnh báo nếu không tìm thấy ô nhiệm vụ
+            if questContent == "" then
+                questContent = "⚠️ Không tìm thấy khung nhiệm vụ nào trong QuestsHolder!"
+            end
             
-            -- CẬP NHẬT LÊN UI
+            -- 3. CẬP NHẬT LÊN DASHBOARD
             Dashboard:Set({
                 Title = "🏆 RANK HIỆN TẠI: " .. string.upper(rankText),
                 Content = questContent
