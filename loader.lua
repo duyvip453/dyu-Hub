@@ -48,7 +48,6 @@ local Tab1 = Window:CreateTab({
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
-    Description = "Mở trực tiếp MailboxMachine trong _MACHINES",
     Callback = function()
         local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
         local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
@@ -75,7 +74,6 @@ Tab1:CreateButton({
 
 Tab1:CreateToggle({
     Name = "Auto Nhận Đồ Hộp Thư",
-    Description = "Tự động nhận thư trực tiếp từ Server",
     CurrentValue = false,
     Callback = function(Value)
         AutoClaimMail = Value
@@ -93,6 +91,46 @@ Tab1:CreateToggle({
                         end
                     end)
                     task.wait(3)
+                end
+            end)
+        end
+    end
+})
+Tab1:CreateToggle({
+    Name = "Auto Nhặt Orb (Hút Xa)",
+    Description = "Tự động thu thập tất cả Orb rơi ra trên toàn bản đồ",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.AutoCollectOrbs = Value
+        if _G.AutoCollectOrbs then
+            task.spawn(function()
+                while _G.AutoCollectOrbs do
+                    pcall(function()
+                        local things = workspace:FindFirstChild("__THINGS")
+                        local orbsFolder = things and things:FindFirstChild("Orbs")
+                        
+                        if orbsFolder then
+                            local orbIds = {}
+                            -- 1. Quét tìm tên (ID) của tất cả Orb đang có trên map
+                            for _, orb in pairs(orbsFolder:GetChildren()) do
+                                local id = tonumber(orb.Name)
+                                if id then
+                                    table.insert(orbIds, id)
+                                end
+                            end
+                            
+                            -- 2. Gửi lệnh nhận tất cả ID lên Server
+                            if #orbIds > 0 then
+                                local network = game:GetService("ReplicatedStorage"):FindFirstChild("Network")
+                                local collectRemote = network and network:FindFirstChild("Orbs: Collect")
+                                if collectRemote then
+                                    -- Cấu trúc {{ID1, ID2, ...}} giống hệt tín hiệu bạn bắt được
+                                    collectRemote:FireServer({orbIds})
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2) -- Tốc độ quét hút siêu nhanh (0.2 giây/lần)
                 end
             end)
         end
