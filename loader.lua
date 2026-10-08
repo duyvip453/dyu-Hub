@@ -92,7 +92,7 @@ Tab2:CreateDropdown({
 })
 
 -- 2. Ô Nhập Cấp Độ (Tier) Bằng Tay
-Tab2:CreateInput({
+Tab1:CreateInput({
     Name = "Cấp Độ Thuốc (Tier)",
     PlaceholderText = "Nhập cấp độ (VD: 1 đến 11)",
     RemoveTextAfterFocusLost = false,
@@ -107,7 +107,7 @@ Tab2:CreateInput({
 })
 
 -- 3. Ô Nhập Số Lượng Cần Uống Bằng Tay
-Tab2:CreateInput({
+Tab1:CreateInput({
     Name = "Số Lượng Cần Uống",
     PlaceholderText = "Nhập số lượng...",
     RemoveTextAfterFocusLost = false,
@@ -122,7 +122,7 @@ Tab2:CreateInput({
 })
 
 -- 4. Nút Kích Hoạt Auto Uống Thuốc
-Tab2:CreateButton({
+Tab1:CreateButton({
     Name = "Tiến Hành Uống Thuốc",
     Callback = function()
         if IsConsuming then
