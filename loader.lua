@@ -149,14 +149,14 @@ Tab1:CreateToggle({
     end
 })
 Tab1:CreateToggle({
-    Name = "Auto Farm Breakables (Vùng 200)",
-    Description = "Tự động đánh các vật thể ngẫu nhiên trong bán kính 200",
+    Name = "Auto Click Breakables (Vùng 200)",
+    Description = "Tự động gửi tín hiệu click ngẫu nhiên vào vật thể trong phạm vi 200",
     CurrentValue = false,
     Callback = function(Value)
-        _G.AutoFarmRange = Value
-        if _G.AutoFarmRange then
+        _G.AutoClickBreak = Value
+        if _G.AutoClickBreak then
             task.spawn(function()
-                while _G.AutoFarmRange do
+                while _G.AutoClickBreak do
                     pcall(function()
                         local player = game:GetService("Players").LocalPlayer
                         local character = player.Character or player.CharacterAdded:Wait()
@@ -167,32 +167,30 @@ Tab1:CreateToggle({
                         if breakablesFolder and rootPart then
                             local validTargets = {}
                             
-                            -- 1. Quét toàn bộ vật thể trong thư mục
                             for _, item in pairs(breakablesFolder:GetChildren()) do
                                 local targetPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
                                 if targetPart then
                                     local distance = (rootPart.Position - targetPart.Position).Magnitude
-                                    
-                                    -- Lọc các vật thể nằm trong phạm vi 200 studs
                                     if distance <= 200 then
-                                        table.insert(validTargets, item)
+                                        table.insert(validTargets, {Item = item, Part = targetPart})
                                     end
                                 end
                             end
                             
-                            -- 2. Nếu tìm thấy vật thể trong vùng, chọn ngẫu nhiên để đánh
                             if #validTargets > 0 then
-                                local randomTarget = validTargets[math.random(1, #validTargets)]
-                                if randomTarget then
-                                    local args = {
-                                        randomTarget.Name
-                                    }
-                                    game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Breakables_PlayerDealDamage"):FireServer(unpack(args))
-                                end
+                                local chosen = validTargets[math.random(1, #validTargets)]
+                                local targetPos = chosen.Part.Position
+                                
+                                -- Giả lập tín hiệu Click chuẩn xác lên vị trí vật thể
+                                local args = {
+                                    Ray.new(rootPart.Position, (targetPos - rootPart.Position).Unit * 200),
+                                    targetPos
+                                }
+                                game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Click"):FireServer(unpack(args))
                             end
                         end
                     end)
-                    task.wait(0.2) -- Tần suất gửi sát thương (0.2 giây/lần)
+                    task.wait(0.25)
                 end
             end)
         end
