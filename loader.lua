@@ -44,11 +44,14 @@ local Window = UIModule:Init({
 })
 -- 3. Tạo Các Tab (Danh mục lớn)
 local Tab1 = Window:CreateTab({
-    Name = "Người Chơi",
+    Name = "chơi đê",
     Icon = "person",
     ImageSource = "Material",
     ShowTitle = true
 })
+
+
+
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
 local PotionIDs = {
@@ -169,11 +172,91 @@ Tab1:CreateButton({
                     task.wait(2)
                 end
             end
-            
             print("[DYU HUB]: Đã hoàn tất quá trình sử dụng thuốc.")
             IsConsuming = false
         end)
     end
 })
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Network = ReplicatedStorage:WaitForChild("Network")
+
+local SelectedFruitAmount = 1
+local IsEatingFruits = false
+
+-- Danh sách ID quả chuẩn trong game
+local ValidFruits = {
+    ["Watermelon"] = true,
+    ["Apple"] = true,
+    ["Rainbow"] = true,
+    ["Pineapple"] = true,
+    ["Orange"] = true,
+    ["Banana"] = true
+}
+
+-- Hàm lấy UUID của 1 quả ngẫu nhiên đang có trong kho đồ
+local function getRandomFruitUUID()
+    local getSuccess, SaveData = pcall(function()
+        local saveScript = ReplicatedStorage:WaitForChild("Library", 5):WaitForChild("Client", 5):WaitForChild("Save", 5)
+        return require(saveScript).Get()
+    end)
+    
+    if getSuccess and SaveData and SaveData.Inventory and SaveData.Inventory.Fruit then
+        local availableUUIDs = {}
+        for uuid, item in pairs(SaveData.Inventory.Fruit) do
+            if ValidFruits[item.id] and (item._am or 1) > 0 then
+                table.insert(availableUUIDs, uuid)
+            end
+        end
+        if #availableUUIDs > 0 then
+            return availableUUIDs[math.random(1, #availableUUIDs)]
+        end
+    end
+    return nil
+end
+
+-- 1. Ô nhập số lượng quả cần ăn
+Tab1:CreateInput({
+    Name = "Số Lượng Quả Ăn Ngẫu Nhiên",
+    PlaceholderText = "Nhập số lượng...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        SelectedFruitAmount = tonumber(Text) or 1
+    end
+})
+
+-- 2. Nút kích hoạt ăn quả ngẫu nhiên
+Tab1:CreateButton({
+    Name = "Bắt Đầu Ăn Quả Ngẫu Nhiên",
+    Callback = function()
+        if IsEatingFruits then return end
+        
+        task.spawn(function()
+            IsEatingFruits = true
+            local consumeRemote = Network:FindFirstChild("Fruits: Consume")
+            
+            if not consumeRemote then
+                IsEatingFruits = false
+                return
+            end
+
+            for i = 1, SelectedFruitAmount do
+                local uuid = getRandomFruitUUID()
+                if not uuid then break end -- Dừng nếu hết quả trong kho
+                
+                pcall(function()
+                    consumeRemote:FireServer(uuid, 1)
+                end)
+                
+                if i < SelectedFruitAmount then
+                    task.wait(0.2) -- Thời gian chờ giữa các lần ăn
+                end
+            end
+            
+            IsEatingFruits = false
+        end)
+    end
+})
+
 task.wait(0.5)
 isLoaded = true
