@@ -98,7 +98,7 @@ Tab1:CreateToggle({
 })
 Tab1:CreateToggle({
     Name = "Auto Nhặt Orb (Hút Xa)",
-    Description = "Tự động thu thập tất cả Orb rơi ra trên toàn bản đồ",
+    Description = "Tự động thu thập tất cả Orb và Coin rơi ra",
     CurrentValue = false,
     Callback = function(Value)
         _G.AutoCollectOrbs = Value
@@ -111,7 +111,8 @@ Tab1:CreateToggle({
                         
                         if orbsFolder then
                             local orbIds = {}
-                            -- 1. Quét tìm tên (ID) của tất cả Orb đang có trên map
+                            
+                            -- 1. Quét tìm toàn bộ Coin và Orb
                             for _, orb in pairs(orbsFolder:GetChildren()) do
                                 local id = tonumber(orb.Name)
                                 if id then
@@ -119,18 +120,18 @@ Tab1:CreateToggle({
                                 end
                             end
                             
-                            -- 2. Gửi lệnh nhận tất cả ID lên Server
+                            -- 2. Gửi một danh sách chuẩn xác lên Server
                             if #orbIds > 0 then
                                 local network = game:GetService("ReplicatedStorage"):FindFirstChild("Network")
                                 local collectRemote = network and network:FindFirstChild("Orbs: Collect")
                                 if collectRemote then
-                                    -- Cấu trúc {{ID1, ID2, ...}} giống hệt tín hiệu bạn bắt được
-                                    collectRemote:FireServer({orbIds})
+                                    -- ĐÃ SỬA: Bỏ cặp ngoặc {} để cấu trúc mảng giống hệt unpack(args) của bạn
+                                    collectRemote:FireServer(orbIds)
                                 end
                             end
                         end
                     end)
-                    task.wait(0.2) -- Tốc độ quét hút siêu nhanh (0.2 giây/lần)
+                    task.wait(0.2)
                 end
             end)
         end
