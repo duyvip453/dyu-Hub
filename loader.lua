@@ -43,7 +43,7 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
-local Tab2 = Window:MakeTab({
+local Tab2 = Window:CreateTab({
     Name = "Auto Farm",
     Icon = "trophy",
      ImageSource = "Material",
