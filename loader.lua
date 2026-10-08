@@ -33,9 +33,14 @@ end
 
 local UIModule = loadstring(rawCode)()
 
--- 2. Khởi tạo Cửa sổ giao diện chính từ Background
-local Window = UIModule:Init()
-
+-- 2. Khởi tạo Cửa sổ giao diện chính
+local Window = UIModule:Init({
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "DYU_HUB",
+        FileName = "Config"
+    }
+})
 -- 3. Tạo Các Tab (Danh mục lớn)
 local Tab1 = Window:CreateTab({
     Name = "Người Chơi",
@@ -52,6 +57,7 @@ local Tab2 = Window:CreateTab({
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
     Name = "Mở Hộp Thư Từ Xa",
+    Flag = "openmail_Flag",
     Callback = function()
         local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
         local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
@@ -79,6 +85,7 @@ Tab1:CreateButton({
 Tab1:CreateToggle({
     Name = "Auto Nhận Đồ Hộp Thư",
     CurrentValue = false,
+    Flag = "autoclaimmail_flag",
     Callback = function(Value)
         AutoClaimMail = Value
         if AutoClaimMail then
