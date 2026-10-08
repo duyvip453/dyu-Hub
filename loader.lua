@@ -33,7 +33,6 @@ if not success or not rawCode or rawCode == "" then
 end
 
 local UIModule = loadstring(rawCode)()
-
 -- 2. Khởi tạo Cửa sổ giao diện chính
 local Window = UIModule:Init({
     ConfigurationSaving = {
@@ -56,146 +55,80 @@ local Tab1 = Window:CreateTab({
 -- Cấu hình dữ liệu Thuốc
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
-local QuestPath = {
-    Rank = "game:GetService('Players').LocalPlayer.PlayerGui.GoalsSide.Frame.Top.Title",
-
-    Quest = "game:GetService('Players').LocalPlayer.PlayerGui.GoalsSide.Frame.Quests.QuestsGradient.QuestsHolder.%s.%s"
-}
-
+--============================================================
+-- PATH
+--============================================================
 local QuestLevels = {
     "Easy",
     "Medium",
     "Hard",
     "Extreme"
 }
-
-
+local function GetRank()
+    return LocalPlayer.PlayerGui.GoalsSide.Frame.Top.Title
+end
+local function GetQuest(level, objectName)
+    return LocalPlayer.PlayerGui
+        .GoalsSide.Frame.Quests.QuestsGradient
+        .QuestsHolder[level][objectName]
+end
 --============================================================
--- UI HIỂN THỊ TRONG TAB 1
+-- RANK
 --============================================================
-
 local khungRank = Tab1:CreateParagraph({
     Title = "🏆 RANK",
-    Content = "Đang tải..."
+    Content = '<font size="24"><b>Đang tải...</b></font>'
 })
+--============================================================
+-- QUEST
+--============================================================
 Tab1:CreateSection("Nhiệm vụ")
 local khungQuest = {}
 for _, level in ipairs(QuestLevels) do
     khungQuest[level] = Tab1:CreateParagraph({
         Title = "📌 " .. level,
-        Content = "Đang tải..."
+        Content = '<font size="22"><b>Đang tải...</b></font>'
     })
 end
 --============================================================
--- HÀM LẤY OBJECT TỪ PATH
+-- CẬP NHẬT
 --============================================================
-local function GetObjectFromPath(path)
-    local success, object = pcall(function()
-        local result = loadstring("return " .. path)()
-        return result
-    end)
-    if success then
-        return object
-    end
-    return nil
-end
---============================================================
--- CẬP NHẬT RANK + QUEST
---===========================================================
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
-            --------------------------------------------------
+            -------------------------------------------------
             -- RANK
             --------------------------------------------------
-            local rankObject = GetObjectFromPath(QuestPath.Rank)
-            local rankText = "N/A"
-            if rankObject then
-                rankText = rankObject.Text or "N/A"
+            local rank = GetRank()
+            if rank then
+                khungRank:Set({
+                    Title = "🏆 RANK",
+
+                    Content =
+                        '<font size="26"><b>'
+                        .. rank.Text
+                        .. '</b></font>'
+                })
             end
-            khungRank:Set({
-                Title = "🏆 RANK",
-                Content = rankText
-            })
             --------------------------------------------------
             -- QUEST
             --------------------------------------------------
             for _, level in ipairs(QuestLevels) do
-                -- Path Title
-                local titlePath = string.format(
-                    QuestPath.Quest,
-                    level,
-                    "Title"
-                )
-                -- Path Progress
-                local progressPath = string.format(
-                    QuestPath.Quest,
-                    level,
-                    "Progress"
-                )
-                local titleObject = GetObjectFromPath(titlePath)
-                local progressObject = GetObjectFromPath(progressPath)
-                local questName =
-                    titleObject and titleObject.Text
-                    or "N/A"
-
-                local progressText =
-                    progressObject and progressObject.Text
-                    or "0/0"
-                --------------------------------------------------
-                -- TÍNH %
-                --------------------------------------------------
-                local cleanProgress = string.gsub(
-                    progressText,
-                    ",",
-                    ""
-                )
-                local current, maximum =
-                    string.match(
-                        cleanProgress,
-                        "(%d+)/(%d+)"
-                    )
-                current = tonumber(current) or 0
-                maximum = tonumber(maximum) or 0
-                local percent = 0
-
-                if maximum > 0 then
-                    percent = math.clamp(
-                        current / maximum,
-                        0,
-                        1
-                    )
+                local title = GetQuest(level, "Title")
+                local progress = GetQuest(level, "Progress")
+                if title and progress then
+                    khungQuest[level]:Set({
+                        Title = "📌 " .. level,
+                        Content =
+                            '<font size="22"><b>'
+                            .. title.Text
+                            .. '</b></font>'
+                            .. "\n"
+                            .. '<font size="20">'
+                            .. progress.Text
+                            .. '</font>'
+                    })
                 end
-                --------------------------------------------------
-                -- THANH TIẾN ĐỘ
-                --------------------------------------------------
-                local barLength = 18
-                local filled = math.floor(
-                    percent * barLength
-                )
-                local empty = barLength - filled
-                local bar =
-                    string.rep("█", filled)
-                    ..
-                    string.rep("░", empty)
-                --------------------------------------------------
-                -- HIỂN THỊ
-                --------------------------------------------------
-                khungQuest[level]:Set({
-                    Title =
-                        "📌 "
-                        .. level
-                        .. ": "
-                        .. questName,
-                    Content =
-                        bar
-                        .. string.format(
-                            " %d%%  (%s)",
-                            math.floor(percent * 100),
-                            progressText
-                        )
-                })
             end
         end)
     end
