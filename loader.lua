@@ -148,5 +148,45 @@ Tab1:CreateToggle({
         end
     end
 })
+Tab1:CreateToggle({
+    Name = "Auto Farm Breakables (Phạm vi 200)",
+    Description = "Tự động tấn công các rương/vật thể trong phạm vi 200 studs",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.AutoFarmBreakables = Value
+        if _G.AutoFarmBreakables then
+            task.spawn(function()
+                while _G.AutoFarmBreakables do
+                    pcall(function()
+                        local player = game:GetService("Players").LocalPlayer
+                        local character = player.Character or player.CharacterAdded:Wait()
+                        local rootPart = character:FindFirstChild("HumanoidRootPart")
+                        
+                        local breakablesFolder = workspace:FindFirstChild("__THINGS") and workspace.__THINGS:FindFirstChild("Breakables")
+                        
+                        if breakablesFolder and rootPart then
+                            for _, item in pairs(breakablesFolder:GetChildren()) do
+                                -- Kiểm tra nếu vật thể có phần gốc để đo khoảng cách
+                                local targetPart = item:IsA("Model") and (item.PrimaryPart or item:FindFirstChildWhichIsA("BasePart"))
+                                if targetPart then
+                                    local distance = (rootPart.Position - targetPart.Position).Magnitude
+                                    
+                                    -- Lọc trong phạm vi <= 200 studs
+                                    if distance <= 200 then
+                                        local args = {
+                                            item.Name -- ID của vật thể chính là tên của model trong thư mục Breakables
+                                        }
+                                        game:GetService("ReplicatedStorage"):WaitForChild("Network"):WaitForChild("Breakables_PlayerDealDamage"):FireServer(unpack(args))
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.2) -- Tần suất gửi sát thương (0.2 giây/lần)
+                end
+            end)
+        end
+    end
+})
 task.wait(0.5)
 isLoaded = true
