@@ -43,7 +43,11 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
-
+local Tab2 = Window:MakeTab({
+    Name = "Auto Farm",
+    Icon = "trophy",
+     ImageSource = "Material",
+})
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Nút Mở Hộp Thư Từ Xa
 Tab1:CreateButton({
