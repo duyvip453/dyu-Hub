@@ -81,8 +81,8 @@ local function getPotionUUID(internalId, tier)
     return nil, 0
 end
 
--- 1. Dropdown Chọn Thuốc
-Tab2:CreateDropdown({
+-- 1. Dropdown Chọn Thuốc (Thêm vào Tab1)
+Tab1:CreateDropdown({
     Name = "Chọn Loại Thuốc",
     Options = {"Treasure Hunter Potion", "Lucky Eggs Potion", "Coins Potion", "Damage Potion"},
     CurrentOption = "Treasure Hunter Potion",
@@ -91,7 +91,7 @@ Tab2:CreateDropdown({
     end
 })
 
--- 2. Ô Nhập Cấp Độ (Tier) Bằng Tay
+-- 2. Ô Nhập Cấp Độ (Tier) Bằng Tay (Thêm vào Tab1)
 Tab1:CreateInput({
     Name = "Cấp Độ Thuốc (Tier)",
     PlaceholderText = "Nhập cấp độ (VD: 1 đến 11)",
@@ -106,7 +106,7 @@ Tab1:CreateInput({
     end
 })
 
--- 3. Ô Nhập Số Lượng Cần Uống Bằng Tay
+-- 3. Ô Nhập Số Lượng Cần Uống Bằng Tay (Thêm vào Tab1)
 Tab1:CreateInput({
     Name = "Số Lượng Cần Uống",
     PlaceholderText = "Nhập số lượng...",
@@ -121,7 +121,7 @@ Tab1:CreateInput({
     end
 })
 
--- 4. Nút Kích Hoạt Auto Uống Thuốc
+-- 4. Nút Kích Hoạt Auto Uống Thuốc (Thêm vào Tab1)
 Tab1:CreateButton({
     Name = "Tiến Hành Uống Thuốc",
     Callback = function()
