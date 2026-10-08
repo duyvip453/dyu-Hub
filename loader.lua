@@ -9,7 +9,6 @@ local Settings = {
 local function SaveConfig()
     writefile(ConfigFileName, HttpService:JSONEncode(Settings :: any))
 end
-
 local function LoadConfig()
     if isfile(ConfigFileName) then
         local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
@@ -22,18 +21,14 @@ local function LoadConfig()
         SaveConfig()
     end
 end
-
 LoadConfig()
 local isLoaded = false
--- 1. Ép Roblox tải bản mới nhất, chống dính Cache GitHub
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
 if not success or not rawCode or rawCode == "" then
     return warn("[DYU HUB]: Không thể tải background UI từ GitHub!")
 end
-
 local UIModule = loadstring(rawCode)()
--- 2. Khởi tạo Cửa sổ giao diện chính
 local Window = UIModule:Init({
     ConfigurationSaving = {
         Enabled = true,
@@ -41,38 +36,53 @@ local Window = UIModule:Init({
         FileName = "Config"
     }
 })
--- 3. Tạo Các Tab (Danh mục lớn)
 local Tab1 = Window:CreateTab({
     Name = "chơi đê",
     Icon = "person",
     ImageSource = "Material",
     ShowTitle = true
 })
-
-
-
--- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
--- Cấu hình dữ liệu Thuốc
-local QuestLevels={"Easy","Medium","Hard","Extreme"}
-local RankLabel=Tab1:CreateLabel({Text="Đang tải...",Style=1})
+local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
 Tab1:CreateSection("Nhiệm vụ")
-local QuestLabels={}
-for _,level in ipairs(QuestLevels) do
-	QuestLabels[level]=Tab1:CreateLabel({Text="Đang tải...",Style=1})
-end
+local EasyLabel = Tab1:CreateLabel({Text="Easy: Đang tải...",Style=1})
+local MediumLabel = Tab1:CreateLabel({Text="Medium: Đang tải...",Style=1})
+local HardLabel = Tab1:CreateLabel({Text="Hard: Đang tải...",Style=1})
+local ExtremeLabel = Tab1:CreateLabel({Text="Extreme: Đang tải...",Style=1})
 task.spawn(function()
-	while task.wait(0.5) do
-		pcall(function()
-			local PlayerGui=LocalPlayer.PlayerGui
-			local Frame=PlayerGui.GoalsSide.Frame
-			RankLabel:Set(Frame.Top.Title.Text)
-			local QuestsHolder=Frame.Quests.QuestsGradient.QuestsHolder
-			for _,level in ipairs(QuestLevels) do
-				local Quest=QuestsHolder[level]
-				QuestLabels[level]:Set(Quest.Title.Text.." | "..Quest.Progress.Text)
-			end
-		end)
-	end
+    while task.wait(0.5) do
+        pcall(function()
+            local PlayerGui = Player:FindFirstChild("PlayerGui")
+            if not PlayerGui then return end
+            local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
+            if not GoalsSide then return end
+            local Frame = GoalsSide:FindFirstChild("Frame")
+            if not Frame then return end
+            local Top = Frame:FindFirstChild("Top")
+            if Top and Top:FindFirstChild("Title") then
+                RankLabel:Set(Top.Title.Text)
+            end
+            local Quests = Frame:FindFirstChild("Quests")
+            local QuestsGradient = Quests and Quests:FindFirstChild("QuestsGradient")
+            local QuestsHolder = QuestsGradient and QuestsGradient:FindFirstChild("QuestsHolder")
+            if not QuestsHolder then return end
+            local Easy = QuestsHolder:FindFirstChild("Easy")
+            local Medium = QuestsHolder:FindFirstChild("Medium")
+            local Hard = QuestsHolder:FindFirstChild("Hard")
+            local Extreme = QuestsHolder:FindFirstChild("Extreme")
+            if Easy and Easy:FindFirstChild("Title") and Easy:FindFirstChild("Progress") then
+                EasyLabel:Set(Easy.Title.Text .. " | " .. Easy.Progress.Text)
+            end
+            if Medium and Medium:FindFirstChild("Title") and Medium:FindFirstChild("Progress") then
+                MediumLabel:Set(Medium.Title.Text .. " | " .. Medium.Progress.Text)
+            end
+            if Hard and Hard:FindFirstChild("Title") and Hard:FindFirstChild("Progress") then
+                HardLabel:Set(Hard.Title.Text .. " | " .. Hard.Progress.Text)
+            end
+            if Extreme and Extreme:FindFirstChild("Title") and Extreme:FindFirstChild("Progress") then
+                ExtremeLabel:Set(Extreme.Title.Text .. " | " .. Extreme.Progress.Text)
+            end
+        end)
+    end
 end)
 task.wait(0.5)
 isLoaded = true
