@@ -53,53 +53,28 @@ local Tab1 = Window:CreateTab({
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
-local khungRank = Tab1:CreateParagraph({
-    Title = "🏆 RANK",
-    Content = "Đang tải..."
-})
-
+local Players=game:GetService("Players")
+local LocalPlayer=Players.LocalPlayer
+local QuestLevels={"Easy","Medium","Hard","Extreme"}
+local RankLabel=Tab1:CreateLabel({Text="🏆 RANK: Đang tải...",Style=1})
 Tab1:CreateSection("Nhiệm vụ")
-
-local khungQuest = {}
-
-for _, level in ipairs(QuestLevels) do
-    khungQuest[level] = Tab1:CreateParagraph({
-        Title = "📌 " .. level,
-        Content = "Đang tải..."
-    })
+local QuestLabels={}
+for _,level in ipairs(QuestLevels) do
+	QuestLabels[level]=Tab1:CreateLabel({Text="📌 "..level..": Đang tải...",Style=1})
 end
-
 task.spawn(function()
-    while task.wait(1) do
-        pcall(function()
-
-            -- RANK
-            local rank = LocalPlayer.PlayerGui
-                .GoalsSide.Frame.Top.Title
-
-            khungRank:Set({
-                Title = "🏆 RANK",
-                Content = rank.Text
-            })
-
-            -- QUEST
-            for _, level in ipairs(QuestLevels) do
-
-                local quest = LocalPlayer.PlayerGui
-                    .GoalsSide.Frame.Quests.QuestsGradient
-                    .QuestsHolder[level]
-
-                khungQuest[level]:Set({
-                    Title = "📌 " .. level,
-                    Content =
-                        quest.Title.Text
-                        .. "\n"
-                        .. quest.Progress.Text
-                })
-            end
-
-        end)
-    end
+	while task.wait(0.5) do
+		pcall(function()
+			local PlayerGui=LocalPlayer.PlayerGui
+			local Frame=PlayerGui.GoalsSide.Frame
+			RankLabel:Set({Text="🏆 RANK: "..Frame.Top.Title.Text})
+			local QuestsHolder=Frame.Quests.QuestsGradient.QuestsHolder
+			for _,level in ipairs(QuestLevels) do
+				local Quest=QuestsHolder[level]
+				QuestLabels[level]:Set({Text="📌 "..level..": "..Quest.Title.Text.." | "..Quest.Progress.Text})
+			end
+		end)
+	end
 end)
 task.wait(0.5)
 isLoaded = true
