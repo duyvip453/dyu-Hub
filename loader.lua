@@ -53,83 +53,51 @@ local Tab1 = Window:CreateTab({
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
---============================================================
--- PATH
---============================================================
-local QuestLevels = {
-    "Easy",
-    "Medium",
-    "Hard",
-    "Extreme"
-}
-local function GetRank()
-    return LocalPlayer.PlayerGui.GoalsSide.Frame.Top.Title
-end
-local function GetQuest(level, objectName)
-    return LocalPlayer.PlayerGui
-        .GoalsSide.Frame.Quests.QuestsGradient
-        .QuestsHolder[level][objectName]
-end
---============================================================
--- RANK
---============================================================
 local khungRank = Tab1:CreateParagraph({
     Title = "🏆 RANK",
-    Content = '<font size="24"><b>Đang tải...</b></font>'
+    Content = "Đang tải..."
 })
---============================================================
--- QUEST
---============================================================
+
 Tab1:CreateSection("Nhiệm vụ")
+
 local khungQuest = {}
+
 for _, level in ipairs(QuestLevels) do
     khungQuest[level] = Tab1:CreateParagraph({
         Title = "📌 " .. level,
-        Content = '<font size="22"><b>Đang tải...</b></font>'
+        Content = "Đang tải..."
     })
 end
---============================================================
--- CẬP NHẬT
---============================================================
+
 task.spawn(function()
     while task.wait(1) do
         pcall(function()
-            -------------------------------------------------
-            -- RANK
-            --------------------------------------------------
-            local rank = GetRank()
-            if rank then
-                khungRank:Set({
-                    Title = "🏆 RANK",
 
+            -- RANK
+            local rank = LocalPlayer.PlayerGui
+                .GoalsSide.Frame.Top.Title
+
+            khungRank:Set({
+                Title = "🏆 RANK",
+                Content = rank.Text
+            })
+
+            -- QUEST
+            for _, level in ipairs(QuestLevels) do
+
+                local quest = LocalPlayer.PlayerGui
+                    .GoalsSide.Frame.Quests.QuestsGradient
+                    .QuestsHolder[level]
+
+                khungQuest[level]:Set({
+                    Title = "📌 " .. level,
                     Content =
-                        '<font size="26"><b>'
-                        .. rank.Text
-                        .. '</b></font>'
+                        quest.Title.Text
+                        .. "\n"
+                        .. quest.Progress.Text
                 })
             end
-            --------------------------------------------------
-            -- QUEST
-            --------------------------------------------------
-            for _, level in ipairs(QuestLevels) do
-                local title = GetQuest(level, "Title")
-                local progress = GetQuest(level, "Progress")
-                if title and progress then
-                    khungQuest[level]:Set({
-                        Title = "📌 " .. level,
-                        Content =
-                            '<font size="22"><b>'
-                            .. title.Text
-                            .. '</b></font>'
-                            .. "\n"
-                            .. '<font size="20">'
-                            .. progress.Text
-                            .. '</font>'
-                    })
-                end
-            end
+
         end)
     end
 end)
