@@ -97,8 +97,8 @@ Tab1:CreateToggle({
     end
 })
 Tab1:CreateToggle({
-    Name = "Auto Nhặt Orb (Hút Xa)",
-    Description = "Tự động thu thập tất cả Orb và Coin rơi ra",
+    Name = "Auto Nhặt Orb & Coin",
+    Description = "Hút toàn bộ vật phẩm trên map vào người và tự động nhặt",
     CurrentValue = false,
     Callback = function(Value)
         _G.AutoCollectOrbs = Value
@@ -106,32 +106,43 @@ Tab1:CreateToggle({
             task.spawn(function()
                 while _G.AutoCollectOrbs do
                     pcall(function()
+                        local player = game:GetService("Players").LocalPlayer
+                        local character = player.Character or player.CharacterAdded:Wait()
+                        local rootPart = character:FindFirstChild("HumanoidRootPart")
+                        
                         local things = workspace:FindFirstChild("__THINGS")
                         local orbsFolder = things and things:FindFirstChild("Orbs")
                         
-                        if orbsFolder then
+                        if orbsFolder and rootPart then
                             local orbIds = {}
                             
-                            -- 1. Quét tìm toàn bộ Coin và Orb
                             for _, orb in pairs(orbsFolder:GetChildren()) do
+                                -- 1. Trích xuất ID
                                 local id = tonumber(orb.Name)
                                 if id then
                                     table.insert(orbIds, id)
                                 end
+                                
+                                -- 2. MAGNET (Nam châm): Kéo vật thể bay thẳng vào người bạn
+                                -- Vượt qua cơ chế kiểm tra khoảng cách của Server
+                                if orb:IsA("BasePart") then
+                                    orb.CFrame = rootPart.CFrame
+                                elseif orb:IsA("Model") and orb.PrimaryPart then
+                                    orb:SetPrimaryPartCFrame(rootPart.CFrame)
+                                end
                             end
                             
-                            -- 2. Gửi một danh sách chuẩn xác lên Server
+                            -- 3. Gửi lệnh nhận lên Server
                             if #orbIds > 0 then
                                 local network = game:GetService("ReplicatedStorage"):FindFirstChild("Network")
                                 local collectRemote = network and network:FindFirstChild("Orbs: Collect")
                                 if collectRemote then
-                                    -- ĐÃ SỬA: Bỏ cặp ngoặc {} để cấu trúc mảng giống hệt unpack(args) của bạn
                                     collectRemote:FireServer(orbIds)
                                 end
                             end
                         end
                     end)
-                    task.wait(0.2)
+                    task.wait(0.1) -- Đẩy tốc độ quét lên 0.1 giây để hút ngay khi vừa rơi ra
                 end
             end)
         end
