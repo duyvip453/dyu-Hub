@@ -1,5 +1,6 @@
 local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 local Settings = { 
     JumpToggle = false, 
@@ -49,11 +50,7 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Network = ReplicatedStorage:WaitForChild("Network")
-local SaveModule = require(ReplicatedStorage.Library.Client.Save)
-
--- Bảng ánh xạ Tên UI sang ID chuẩn trong hệ thống game
+-- Cấu hình dữ liệu Thuốc
 local PotionIDs = {
     ["Treasure Hunter Potion"] = "Treasure Hunter",
     ["Lucky Eggs Potion"] = "Lucky Eggs",
@@ -61,17 +58,20 @@ local PotionIDs = {
     ["Damage Potion"] = "Damage"
 }
 
--- Biến lưu trạng thái người dùng chọn (mặc định)
 local SelectedPotion = "Treasure Hunter Potion"
 local SelectedTier = 1
 local SelectedAmount = 1
 local IsConsuming = false
 
--- Hàm tìm UUID động của thuốc trong kho đồ
+-- Hàm lấy UUID an toàn (không làm treo/lỗi script chính)
 local function getPotionUUID(internalId, tier)
-    local Save = SaveModule.Get()
-    if Save and Save.Inventory and Save.Inventory.Potion then
-        for uuid, item in pairs(Save.Inventory.Potion) do
+    local getSuccess, SaveData = pcall(function()
+        local saveScript = ReplicatedStorage:WaitForChild("Library", 5):WaitForChild("Client", 5):WaitForChild("Save", 5)
+        return require(saveScript).Get()
+    end)
+    
+    if getSuccess and SaveData and SaveData.Inventory and SaveData.Inventory.Potion then
+        for uuid, item in pairs(SaveData.Inventory.Potion) do
             local itemTier = item.tn or 1
             if item.id == internalId and itemTier == tier then
                 return uuid, (item._am or 1)
@@ -81,17 +81,22 @@ local function getPotionUUID(internalId, tier)
     return nil, 0
 end
 
--- 1. Dropdown Chọn Thuốc (Thêm vào Tab1)
+-- 1. Dropdown Chọn Thuốc
 Tab1:CreateDropdown({
     Name = "Chọn Loại Thuốc",
     Options = {"Treasure Hunter Potion", "Lucky Eggs Potion", "Coins Potion", "Damage Potion"},
+    Default = "Treasure Hunter Potion",
     CurrentOption = "Treasure Hunter Potion",
     Callback = function(Option)
-        SelectedPotion = Option
+        if type(Option) == "table" then
+            SelectedPotion = Option[1] or "Treasure Hunter Potion"
+        else
+            SelectedPotion = Option
+        end
     end
 })
 
--- 2. Ô Nhập Cấp Độ (Tier) Bằng Tay (Thêm vào Tab1)
+-- 2. Ô Nhập Cấp Độ (Tier)
 Tab1:CreateInput({
     Name = "Cấp Độ Thuốc (Tier)",
     PlaceholderText = "Nhập cấp độ (VD: 1 đến 11)",
@@ -106,7 +111,7 @@ Tab1:CreateInput({
     end
 })
 
--- 3. Ô Nhập Số Lượng Cần Uống Bằng Tay (Thêm vào Tab1)
+-- 3. Ô Nhập Số Lượng Cần Uống
 Tab1:CreateInput({
     Name = "Số Lượng Cần Uống",
     PlaceholderText = "Nhập số lượng...",
@@ -121,7 +126,7 @@ Tab1:CreateInput({
     end
 })
 
--- 4. Nút Kích Hoạt Auto Uống Thuốc (Thêm vào Tab1)
+-- 4. Nút Kích Hoạt Auto Uống Thuốc
 Tab1:CreateButton({
     Name = "Tiến Hành Uống Thuốc",
     Callback = function()
@@ -133,35 +138,33 @@ Tab1:CreateButton({
         task.spawn(function()
             IsConsuming = true
             local internalId = PotionIDs[SelectedPotion]
-            local consumeRemote = Network:FindFirstChild("Potions: Consume")
+            local network = ReplicatedStorage:FindFirstChild("Network")
+            local consumeRemote = network and network:FindFirstChild("Potions: Consume")
             
             if not consumeRemote then
-                warn("[DYU HUB]: Lỗi - Không tìm thấy tín hiệu uống thuốc từ Server!")
+                warn("[DYU HUB]: Lỗi - Không tìm thấy Remote 'Potions: Consume'!")
                 IsConsuming = false
                 return
             end
 
             for i = 1, SelectedAmount do
-                -- Quét lại kho đồ mỗi lần uống để lấy UUID chuẩn nhất
                 local uuid, currentAmount = getPotionUUID(internalId, SelectedTier)
                 
                 if not uuid or currentAmount <= 0 then
-                    warn("[DYU HUB]: Đã hết " .. SelectedPotion .. " Cấp " .. SelectedTier .. " trong kho đồ!")
+                    warn("[DYU HUB]: Đã hết " .. tostring(SelectedPotion) .. " Cấp " .. tostring(SelectedTier) .. " trong kho đồ!")
                     break
                 end
                 
-                -- Thực thi gọi Remote
-                local success = pcall(function()
+                local execSuccess = pcall(function()
                     consumeRemote:FireServer(uuid, 1)
                 end)
 
-                if success then
+                if execSuccess then
                     print(string.format("[DYU HUB]: Đã dùng (%d/%d) %s [Tier %d]", i, SelectedAmount, SelectedPotion, SelectedTier))
                 else
-                    warn("[DYU HUB]: Lỗi khi cố gắng uống thuốc!")
+                    warn("[DYU HUB]: Lỗi khi gửi lệnh uống thuốc!")
                 end
                 
-                -- Thời gian chờ 2 giây trước bình tiếp theo (Bỏ qua delay ở bình cuối cùng)
                 if i < SelectedAmount then
                     task.wait(2)
                 end
