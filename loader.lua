@@ -53,25 +53,23 @@ local Tab1 = Window:CreateTab({
 
 -- 4. Thêm Chức Năng vào Tab (Ví dụ với các Element của Luna)
 -- Cấu hình dữ liệu Thuốc
-local Players=game:GetService("Players")
-local LocalPlayer=Players.LocalPlayer
 local QuestLevels={"Easy","Medium","Hard","Extreme"}
-local RankLabel=Tab1:CreateLabel({Text="🏆 RANK: Đang tải...",Style=1})
+local RankLabel=Tab1:CreateLabel({Text="Đang tải...",Style=1})
 Tab1:CreateSection("Nhiệm vụ")
 local QuestLabels={}
 for _,level in ipairs(QuestLevels) do
-	QuestLabels[level]=Tab1:CreateLabel({Text="📌 "..level..": Đang tải...",Style=1})
+	QuestLabels[level]=Tab1:CreateLabel({Text="Đang tải...",Style=1})
 end
 task.spawn(function()
 	while task.wait(0.5) do
 		pcall(function()
 			local PlayerGui=LocalPlayer.PlayerGui
 			local Frame=PlayerGui.GoalsSide.Frame
-			RankLabel:Set({Text="🏆 RANK: "..Frame.Top.Title.Text})
+			RankLabel:Set(Frame.Top.Title.Text)
 			local QuestsHolder=Frame.Quests.QuestsGradient.QuestsHolder
 			for _,level in ipairs(QuestLevels) do
 				local Quest=QuestsHolder[level]
-				QuestLabels[level]:Set({Text="📌 "..level..": "..Quest.Title.Text.." | "..Quest.Progress.Text})
+				QuestLabels[level]:Set(Quest.Title.Text.." | "..Quest.Progress.Text)
 			end
 		end)
 	end
