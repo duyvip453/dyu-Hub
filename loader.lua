@@ -131,12 +131,17 @@ end
 local function IdentifyQuestGroup(questTitle)
     local text = NormalizeQuestText(questTitle)
 
-    if text:find("hatch") and (
-        text:find("best egg") or
-        text:find("rainbow pets") or
-        text:find("golden pets") or
-        text:find("legendary") or
-        text:find("or above")
+    if (
+        text:find("hatch") and (
+            text:find("best egg") or
+            text:find("legendary") or
+            text:find("or above")
+        )
+    ) or (
+        text:find("make") and (
+            text:find("rainbow pets") or
+            text:find("golden pets")
+        ) and text:find("best egg")
     ) then
         return "Eggs"
     end
@@ -162,12 +167,17 @@ local function IdentifyQuestGroup(questTitle)
         return "BestAreaEvent"
     end
 
-    if text:find("in best area") and (
-        text:find("breakables") or
-        text:find("superior mini%-chest") or
-        text:find("collect") and text:find("potions") or
-        text:find("collect") and text:find("enchants") or
-        text:find("diamond breakables") or
+    if (
+        text:find("break") and text:find("breakables") and text:find("in best area")
+    ) or (
+        text:find("superior mini%-chest") and text:find("in best area")
+    ) or (
+        text:find("collect") and (
+            text:find("potions") or text:find("enchants")
+        )
+    ) or (
+        text:find("diamond breakables")
+    ) or (
         text:find("earn") and text:find("diamonds")
     ) then
         return "BestArea"
