@@ -53,10 +53,12 @@ local AUTO_UPGRADE_INTERVAL = 2
 local autoUpgradeRunning = false
 
 Tab1:CreateSection("Nâng cấp")
-Tab1:CreateButton({
-    Name = "Auto nâng trứng: Bật / Tắt",
-    Callback = function()
-        autoUpgradeRunning = not autoUpgradeRunning
+Tab1:CreateToggle({
+    Name = "Auto nâng trứng",
+    CurrentValue = false,
+    Flag = "AutoUpgradeEggsToggle",
+    Callback = function(Value)
+        autoUpgradeRunning = Value
 
         if not autoUpgradeRunning then
             warn("[DYU HUB] Auto nâng trứng: ĐÃ TẮT")
