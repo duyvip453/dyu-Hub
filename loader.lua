@@ -670,9 +670,51 @@ QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
 end
 -- [END] Box Collect
 
--- [START] Box CollectPotions: khung trống, chưa triển khai script
+-- [START] Box CollectPotions: random ID potion và gọi máy nâng cấp cho tới khi quest kết thúc
 QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
-    -- Chưa triển khai theo yêu cầu.
+    if not isEnabled() then return end
+
+    local entries = {}
+    for _, entry in ipairs(PotionUpgradeIDs.Entries or {}) do
+        if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+            table.insert(entries, entry)
+        end
+    end
+
+    if #entries == 0 then
+        warn("[DYU HUB] CollectPotions: registry không có ID potion hợp lệ.")
+        return
+    end
+
+    local remoteName = PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate"
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote then
+        warn("[DYU HUB] CollectPotions: không tìm thấy remote " .. tostring(remoteName))
+        return
+    end
+
+    print("[DYU HUB] CollectPotions bắt đầu: random potion ID, amount=1; quest=" .. tostring(questTitle))
+    while isEnabled() do
+        local entry = entries[math.random(1, #entries)]
+        if not isEnabled() then break end
+
+        local ok, result = pcall(function()
+            return remote:InvokeServer(entry.Id, 1)
+        end)
+
+        if not ok then
+            warn("[DYU HUB] CollectPotions upgrade lỗi: " .. tostring(result))
+            task.wait(0.5)
+        else
+            print("[DYU HUB] CollectPotions: gửi upgrade potion=" .. tostring(entry.Potion or "Unknown")
+                .. ", tier=" .. tostring(entry.FromTier or "?") .. "->" .. tostring(entry.ToTier or "?")
+                .. ", result=" .. tostring(result))
+            task.wait(0.2)
+        end
+    end
+
+    print("[DYU HUB] CollectPotions kết thúc hoặc bị hủy: " .. tostring(questTitle))
 end
 -- [END] Box CollectPotions
 
