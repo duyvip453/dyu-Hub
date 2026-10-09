@@ -326,6 +326,7 @@ end
 local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
+    Collect = nil,
     LegendaryEggs = nil,
     Eggs = nil,
     InventoryItems = nil,
@@ -376,8 +377,9 @@ local QuestMatchRules = {
     -- Generic Eggs only matches "hatch" when the title does not mention "legend".
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
+    {Group = "Collect", Keywords = {"collect"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
-    {Group = "BestArea", Keywords = {"breakables", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds", "collect"}}
+    {Group = "BestArea", Keywords = {"breakables", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
 }
 
 local function IdentifyQuestGroup(questTitle)
@@ -544,6 +546,16 @@ end)
 -- Each box should read its own progress and return when current progress reaches the target.
 -- BestArea: mỗi lần được dispatch cho một nhiệm vụ BestArea mới thì teleport tới điểm farm.
 -- Không dùng cờ toàn cục, để các nhiệm vụ BestArea về sau vẫn có thể teleport lại.
+-- Collect has its own box because these quests use a different method than BestArea farming.
+-- Add the specific collect behavior here when ready; do not teleport to BestArea by default.
+QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
+    if not isEnabled() then
+        return
+    end
+
+    print("[DYU HUB] Collect quest detected; dedicated Collect box selected: " .. tostring(questTitle))
+end
+
 QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
     if not isEnabled() then
         return
