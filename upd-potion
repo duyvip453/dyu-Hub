@@ -12,163 +12,163 @@ return {
             Potion = "Treasure Hunter Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "1eec765e58394ec79e575c31b68e3390"
         },
         {
             Potion = "Treasure Hunter Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "0947ada19d98420f96bbdc6038553eed"
         },
         {
             Potion = "Treasure Hunter Potion",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "5437cee97be845fc8c337440700850ff"
         },
         {
             Potion = "Treasure Hunter Potion",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "df86fb91c6d54400962e4a435debeb5b"
         },
         {
             Potion = "Treasure Hunter Potion",
             FromTier = 5,
             ToTier = 6,
-            Id = ""
+            Id = "1a25205aad9945008fea98c31e7c85bd"
         },
         {
             Potion = "Speed Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "c4bda08b98d24f388fde10722ff2a617"
         },
         {
             Potion = "Speed Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "9b5c5fc3011d45f692a1d00564e01e45"
         },
         {
             Potion = "Lucky Eggs Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "d1ac54844dec4e039efbe52d2d2391b2"
         },
         {
             Potion = "Lucky Eggs Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "7a33b84e2580461aae205a4e71d1e754"
         },
         {
             Potion = "Lucky Eggs Potion",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "f20dc1e5ba8942c8b1e05e1cb8189123"
         },
         {
             Potion = "Lucky Eggs Potion",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "c64383587ab54549accf6bd6d3a2a068"
         },
         {
             Potion = "Lucky Eggs Potion",
             FromTier = 5,
             ToTier = 6,
-            Id = ""
+            Id = "bd2e4f0854454ffd845f2057335a1394"
         },
         {
             Potion = "Diamonds Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "a694d456b3c143b8870523a3054a1279"
         },
         {
             Potion = "Diamonds Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "8fe5610dcab54c53b3de4a7907f55ce0"
         },
         {
             Potion = "Diamonds Potion",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "0c52b7934ab745ec82b41361b668f410"
         },
         {
             Potion = "Diamonds Potion",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "c9daea462f7a49c9b9fc225dfc5eaf74"
         },
         {
             Potion = "Diamonds Potion",
             FromTier = 5,
             ToTier = 6,
-            Id = ""
+            Id = "c48d64cc78bd4183963559f234569063"
         },
         {
             Potion = "Coins Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "171d91a58c0a45e09d88976c65a67ce4"
         },
         {
             Potion = "Coins Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "64f146cb9c464b458a8a5f288ab1a8ac"
         },
         {
             Potion = "Coins Potion",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "42277f8e6f8d460287192bcceacc43af"
         },
         {
             Potion = "Coins Potion",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "e06d3b95bce24e96a602a555e1af8380"
         },
         {
             Potion = "Coins Potion",
             FromTier = 5,
             ToTier = 6,
-            Id = ""
+            Id = "5733d926997748909284a0839ace8459"
         },
         {
             Potion = "Damage Potion",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "247a5708d5d84be8a9c4a6337ffdd855"
         },
         {
             Potion = "Damage Potion",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "088ba0e3bb734f51a5f56b0e17938dc5"
         },
         {
             Potion = "Damage Potion",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "e92b263858554ff0b7b45849aeee1cf2"
         },
         {
             Potion = "Damage Potion",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "5630b40ee20f4e9194052d16df45cc1b"
         },
         {
             Potion = "Damage Potion",
             FromTier = 5,
             ToTier = 6,
-            Id = ""
+            Id = "cd5401cf24014163ad61798a987be3db"
         }
     }
 }
