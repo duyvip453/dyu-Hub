@@ -116,6 +116,7 @@ local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/ma
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
 if not success or not rawCode or rawCode == "" then
     return
+end
 local UIModule = loadstring(rawCode)()
 local Window = UIModule:Init({
     ConfigurationSaving = {
