@@ -477,8 +477,9 @@ local QuestMatchRules = {
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
-    {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
-    {Group = "BestArea", Keywords = {"breakables", "mini-chests", "mini-chest", "superior mini-chest", "mini chest", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
+    -- Các từ khóa trong AnyKeywords là lựa chọn thay thế nhau (OR), không phải bắt buộc xuất hiện cùng lúc.
+    {Group = "BestAreaEvent", AnyKeywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
+    {Group = "BestArea", AnyKeywords = {"best area", "breakables", "mini-chests", "mini-chest", "superior mini-chest", "mini chest", "diamond", "diamonds", "earn"}}
 }
 
 local function IdentifyQuestGroup(questTitle)
@@ -492,11 +493,23 @@ local function IdentifyQuestGroup(questTitle)
 
     for _, rule in ipairs(QuestMatchRules) do
         local text = NormalizeQuestText(questTitle, rule.KeepNumbers == true)
-        local matched = true
-        for _, keyword in ipairs(rule.Keywords) do
-            if not text:find(keyword, 1, true) then
-                matched = false
-                break
+        local matched = false
+        if rule.AnyKeywords then
+            -- Chỉ cần khớp một từ khóa là đủ cho nhóm có nhiều tên nhiệm vụ khác nhau.
+            for _, keyword in ipairs(rule.AnyKeywords) do
+                if text:find(keyword, 1, true) then
+                    matched = true
+                    break
+                end
+            end
+        else
+            -- Keywords mặc định yêu cầu tất cả từ khóa, dùng cho Upgrade Potions/Enchants.
+            matched = true
+            for _, keyword in ipairs(rule.Keywords or {}) do
+                if not text:find(keyword, 1, true) then
+                    matched = false
+                    break
+                end
             end
         end
         if matched then
