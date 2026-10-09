@@ -453,33 +453,30 @@ end)
 -- The loader calls a box by name: QuestScriptBoxes.BestArea(...), QuestScriptBoxes.Eggs(...), etc.
 -- The third argument is isEnabled(); check it in long-running loops and return when false.
 -- Each box should read its own progress and return when current progress reaches the target.
--- Teleport BestArea một lần duy nhất trong phiên chạy loader.
-local BestAreaTeleported = false
-
+-- BestArea: mỗi lần được dispatch cho một nhiệm vụ BestArea mới thì teleport tới điểm farm.
+-- Không dùng cờ toàn cục, để các nhiệm vụ BestArea về sau vẫn có thể teleport lại.
 QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
-    if BestAreaTeleported or not isEnabled() then
+    if not isEnabled() then
         return
     end
 
     local character = Player.Character or Player.CharacterAdded:Wait()
-    if not isEnabled() or BestAreaTeleported then
+    if not isEnabled() then
         return
     end
 
     local root = character:WaitForChild("HumanoidRootPart")
-    if not isEnabled() or BestAreaTeleported then
+    if not isEnabled() then
         return
     end
 
-    BestAreaTeleported = true
     local target = Vector3.new(-15044.65, 16.34, 2203.12)
-
     local ok, err = pcall(function()
         root.CFrame = CFrame.new(target)
     end)
 
     if ok then
-        print("[DYU HUB] BestArea: đã teleport một lần tới " .. tostring(target))
+        print("[DYU HUB] BestArea: đã teleport tới " .. tostring(target) .. " cho nhiệm vụ: " .. tostring(questTitle))
     else
         warn("[DYU HUB] BestArea teleport thất bại: " .. tostring(err))
     end
