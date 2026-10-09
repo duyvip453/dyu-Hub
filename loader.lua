@@ -481,7 +481,6 @@ local QuestMatchRules = {
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
-    {Group = "Collect", Keywords = {"collect"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
     {Group = "BestArea", Keywords = {"breakables", "mini-chests", "mini-chest", "superior mini-chest", "mini chest", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
 }
