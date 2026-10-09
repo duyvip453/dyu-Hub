@@ -511,3 +511,52 @@ end
 -- QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
 --     -- Make-pet code; keep the original questTitle numbers.
 -- end
+
+-- TEMP TEST: Auto Hatch Veilroot Egg (remove this block after testing).
+local AutoHatchVeilrootEnabled = false
+local AutoHatchVeilrootRunning = false
+
+Tab1:CreateSection("TEST - Auto Hatch")
+
+Tab1:CreateToggle({
+    Name = "TEST Auto Hatch Veilroot Egg x32",
+    CurrentValue = false,
+    Callback = function(Value)
+        AutoHatchVeilrootEnabled = Value
+
+        if not Value or AutoHatchVeilrootRunning then
+            return
+        end
+
+        AutoHatchVeilrootRunning = true
+        task.spawn(function()
+            local remote
+            local ok, err = pcall(function()
+                remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
+            end)
+
+            if not ok then
+                warn("[DYU HUB] Auto Hatch: không tìm thấy remote: " .. tostring(err))
+                AutoHatchVeilrootRunning = false
+                return
+            end
+
+            while AutoHatchVeilrootEnabled do
+                local success, result = pcall(function()
+                    return remote:InvokeServer("Veilroot Egg", 32)
+                end)
+
+                if not success then
+                    warn("[DYU HUB] Auto Hatch lỗi: " .. tostring(result))
+                    task.wait(1)
+                else
+                    -- Nghỉ giữa các lần gọi để tránh spam remote quá dày.
+                    task.wait(0.5)
+                end
+            end
+
+            AutoHatchVeilrootRunning = false
+        end)
+    end
+})
+
