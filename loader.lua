@@ -121,6 +121,8 @@ local QuestScriptRouter = {
     InventoryItems = nil
 }
 
+local LastDispatchedQuest = {}
+
 local function NormalizeQuestText(text)
     text = string.lower(tostring(text or ""))
     text = text:gsub("[%d,%.]", " ")
@@ -188,13 +190,32 @@ end
 
 local function HandleRecognizedQuest(questTitle, questGroup, difficulty)
     local scriptHandler = QuestScriptRouter[questGroup]
-    if type(scriptHandler) == "function" then
-        scriptHandler(questTitle, difficulty)
+    if type(scriptHandler) ~= "function" then
+        return
     end
+
+    local questKey = difficulty .. ":" .. questGroup
+    if LastDispatchedQuest[questKey] == questTitle then
+        return
+    end
+
+    LastDispatchedQuest[questKey] = questTitle
+    task.spawn(function()
+        local ok, err = pcall(scriptHandler, questTitle, difficulty)
+        if not ok then
+            warn("[DYU HUB] Quest handler error (" .. questGroup .. "): " .. tostring(err))
+        end
+    end)
 end
 
 local function SetQuestGroupEnabled(groupName, value)
     QuestGroupEnabled[groupName] = value
+
+    for key in pairs(LastDispatchedQuest) do
+        if key:find(":" .. groupName, 1, true) then
+            LastDispatchedQuest[key] = nil
+        end
+    end
 
     if groupName == "BestArea" then
         Settings.AutoQuestBestArea = value
