@@ -359,7 +359,7 @@ local QuestMatchRules = {
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "Collect", Keywords = {"collect"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
-    {Group = "BestArea", Keywords = {"breakables", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
+    {Group = "BestArea", Keywords = {"breakables", "mini-chests", "mini-chest", "mini chests", "mini chest", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
 }
 
 local function IdentifyQuestGroup(questTitle)
