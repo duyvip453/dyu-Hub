@@ -55,7 +55,6 @@ local autoUpgradeRunning = false
 Tab1:CreateSection("Nâng cấp")
 Tab1:CreateButton({
     Name = "Auto nâng trứng: Bật / Tắt",
-    Description = "Bấm một lần để chạy, bấm lại để dừng.",
     Callback = function()
         autoUpgradeRunning = not autoUpgradeRunning
 
@@ -81,7 +80,7 @@ Tab1:CreateButton({
         end)
     end
 })
-
+--rank
 local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
 local RankTextObject
@@ -136,5 +135,6 @@ task.spawn(function()
         end)
     end
 end)
+--endrank
 task.wait(0.5)
 isLoaded = true
