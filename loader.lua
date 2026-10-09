@@ -468,7 +468,9 @@ local function NormalizeQuestText(value, keepNumbers)
     return text
 end
 local QuestMatchRules = {
-    -- UpgradePotion/UpdateEnchant được phân biệt bằng hai keyword riêng trong IdentifyQuestGroup.
+    -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
+    {Group = "UpdatePotion", Keywords = {"upgrade", "potions"}, MatchAll = true},
+    {Group = "UpdateEnchant", Keywords = {"upgrade", "enchants"}, MatchAll = true},
     -- MakePet is checked first; its box distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
     -- LegendaryEggs is handled by the explicit BOTH-keywords check in IdentifyQuestGroup.
@@ -484,16 +486,6 @@ local function IdentifyQuestGroup(questTitle)
     local originalText = NormalizeQuestText(questTitle, true)
     local normalizedTitle = NormalizeQuestText(questTitle, true)
 
-    -- Upgrade quests require BOTH the shared keyword "upgrade" and their specific type.
-    -- Keep these checks separate so "potions" and "enchants" cannot be confused.
-    if normalizedTitle:find("upgrade", 1, true) then
-        if normalizedTitle:find("potions", 1, true) then
-            return "UpdatePotion", originalText
-        elseif normalizedTitle:find("enchants", 1, true) then
-            return "UpdateEnchant", originalText
-        end
-    end
-
     -- A Legendary egg quest must contain both "hatch" and "legend".
     if normalizedTitle:find("hatch", 1, true) and normalizedTitle:find("legend", 1, true) then
         return "LegendaryEggs", originalText
@@ -501,10 +493,15 @@ local function IdentifyQuestGroup(questTitle)
 
     for _, rule in ipairs(QuestMatchRules) do
         local text = NormalizeQuestText(questTitle, rule.KeepNumbers == true)
+        local matched = true
         for _, keyword in ipairs(rule.Keywords) do
-            if text:find(keyword, 1, true) then
-                return rule.Group, originalText
+            if not text:find(keyword, 1, true) then
+                matched = false
+                break
             end
+        end
+        if matched then
+            return rule.Group, originalText
         end
     end
 
