@@ -559,4 +559,48 @@ Tab1:CreateToggle({
         end)
     end
 })
+-- TEMP TEST: Auto Hatch Hollow Egg (remove this block after testing).
+local AutoHatchHollowEnabled = false
+local AutoHatchHollowRunning = false
+
+Tab1:CreateToggle({
+    Name = "TEST Auto Hatch Hollow Egg x32",
+    CurrentValue = false,
+    Callback = function(Value)
+        AutoHatchHollowEnabled = Value
+
+        if not Value or AutoHatchHollowRunning then
+            return
+        end
+
+        AutoHatchHollowRunning = true
+        task.spawn(function()
+            local remote
+            local ok, err = pcall(function()
+                remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
+            end)
+
+            if not ok then
+                warn("[DYU HUB] Hollow Auto Hatch: không tìm thấy remote: " .. tostring(err))
+                AutoHatchHollowRunning = false
+                return
+            end
+
+            while AutoHatchHollowEnabled do
+                local success, result = pcall(function()
+                    return remote:InvokeServer("Hollow Egg", 32)
+                end)
+
+                if not success then
+                    warn("[DYU HUB] Hollow Auto Hatch lỗi: " .. tostring(result))
+                    task.wait(1)
+                else
+                    task.wait(0.5)
+                end
+            end
+
+            AutoHatchHollowRunning = false
+        end)
+    end
+})
 
