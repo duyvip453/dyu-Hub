@@ -292,8 +292,9 @@ end
 local QuestMatchRules = {
     -- Make is checked first and keeps numbers for identifying the requested pet.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
-    -- Specific hatch quests mentioning Legendary must be matched before generic hatch quests.
-    {Group = "LegendaryEggs", Keywords = {"legendary"}},
+    -- LegendaryEggs requires BOTH "hatch" and "legend" in the quest title.
+    {Group = "LegendaryEggs", Keywords = {"hatch", "legend"}},
+    -- Generic Eggs only matches "hatch" when the title does not mention "legend".
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
@@ -302,6 +303,12 @@ local QuestMatchRules = {
 
 local function IdentifyQuestGroup(questTitle)
     local originalText = NormalizeQuestText(questTitle, true)
+    local normalizedTitle = NormalizeQuestText(questTitle, true)
+
+    -- A Legendary egg quest must contain both "hatch" and "legend".
+    if normalizedTitle:find("hatch", 1, true) and normalizedTitle:find("legend", 1, true) then
+        return "LegendaryEggs", originalText
+    end
 
     for _, rule in ipairs(QuestMatchRules) do
         local text = NormalizeQuestText(questTitle, rule.KeepNumbers == true)
