@@ -148,6 +148,8 @@ task.spawn(function()
     end
 end)
 --endrank
+
+
 local AutoUpdateEgg = Settings.AutoUpdateEgg
 local AutoUpdatePet = Settings.AutoUpdatePet
 
@@ -221,26 +223,25 @@ end
 if AutoUpdatePet then
     RunPetUpdater()
 end
+--endslot
+
 
 task.wait(0.5)
 isLoaded = true
 
 Tab1:CreateSection("Auto Farm Quest")
-
 local QuestRankEnabled = {
     Easy = Settings.AutoQuestEasy,
     Medium = Settings.AutoQuestMedium,
     Hard = Settings.AutoQuestHard,
     Extreme = Settings.AutoQuestExtreme
 }
-
 local QuestRankPaths = {
     Easy = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Easy"},
     Medium = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Medium"},
     Hard = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Hard"},
     Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme"}
 }
-
 -- Script boxes: put each group's farming function in its matching box.
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
@@ -248,7 +249,6 @@ local QuestRankPaths = {
 -- Current BuyMax hatch amount, refreshed continuously from the game's UI.
 -- Auto Hatch reads this shared value so the requested amount can change during farming.
 local CurrentMaxEggHatchAmount = 1
-
 local function RefreshMaxEggHatchAmount()
     local playerGui = Player:FindFirstChild("PlayerGui")
     local misc = playerGui and playerGui:FindFirstChild("_MISC")
@@ -257,35 +257,27 @@ local function RefreshMaxEggHatchAmount()
     local contents = frame and frame:FindFirstChild("Contents")
     local buyMax = contents and contents:FindFirstChild("BuyMax")
     local textLabel = buyMax and buyMax:FindFirstChild("TextLabel")
-
     if not textLabel or not textLabel:IsA("TextLabel") then
         return CurrentMaxEggHatchAmount
     end
-
     local amountText = textLabel.Text
     local amount = tonumber(string.match(amountText, "%d+"))
     if amount and amount >= 1 then
         CurrentMaxEggHatchAmount = math.floor(amount)
     end
-
     return CurrentMaxEggHatchAmount
 end
-
 task.spawn(function()
     while task.wait(0.5) do
         RefreshMaxEggHatchAmount()
     end
 end)
-
 local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     if not isEnabled() then return end
-
     local character = Player.Character or Player.CharacterAdded:Wait()
     if not isEnabled() then return end
-
     local root = character:WaitForChild("HumanoidRootPart")
     if not isEnabled() then return end
-
     local teleported, teleportError = pcall(function()
         root.CFrame = CFrame.new(targetPosition)
     end)
@@ -293,11 +285,9 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
         warn("[DYU HUB] Không thể teleport cho nhiệm vụ " .. tostring(questTitle) .. ": " .. tostring(teleportError))
         return
     end
-
     -- Both egg quests wait one second after teleporting before the first hatch.
-    task.wait(1)
+    task.wait(2)
     if not isEnabled() then return end
-
     local remote
     local ok, err = pcall(function()
         remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
@@ -306,14 +296,12 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
         warn("[DYU HUB] Không tìm thấy remote mở trứng: " .. tostring(err))
         return
     end
-
     -- Do not read progress here. The Auto Farm Quest scanner stops this loop
     -- by invalidating isEnabled() when it detects full progress or a new quest.
     while isEnabled() do
         local success, result = pcall(function()
             return remote:InvokeServer(eggName, RefreshMaxEggHatchAmount())
         end)
-
         if not success then
             warn("[DYU HUB] Auto hatch " .. eggName .. " lỗi: " .. tostring(result))
             task.wait(1)
@@ -322,7 +310,6 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
         end
     end
 end
-
 local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
@@ -332,7 +319,6 @@ local QuestScriptBoxes = {
     InventoryItems = nil,
     MakePet = nil
 }
-
 local QuestRankState = {}
 for rank in pairs(QuestRankPaths) do
     QuestRankState[rank] = {
@@ -344,23 +330,18 @@ for rank in pairs(QuestRankPaths) do
         CompleteWaitUntil = 0
     }
 end
-
 local function GetQuestInfoFromPath(path)
     local current = Player:FindFirstChild("PlayerGui")
     if not current then return nil, nil end
-
     for _, name in ipairs(path) do
         current = current:FindFirstChild(name)
         if not current then return nil, nil end
     end
-
     local title = current:FindFirstChild("Title")
     local progress = current:FindFirstChild("Progress")
     if not title or not progress then return nil, nil end
-
     return title.Text, progress.Text
 end
-
 local function NormalizeQuestText(value, keepNumbers)
     local text = string.lower(tostring(value or ""))
     if not keepNumbers then
@@ -369,7 +350,6 @@ local function NormalizeQuestText(value, keepNumbers)
     text = text:gsub("%s+", " ")
     return text
 end
-
 local QuestMatchRules = {
     -- Make is checked first and keeps numbers for identifying the requested pet.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
@@ -545,8 +525,9 @@ end)
 -- The third argument is isEnabled(); check it in long-running loops and return when false.
 -- Each box should read its own progress and return when current progress reaches the target.
 -- BestArea: mỗi lần được dispatch cho một nhiệm vụ BestArea mới thì teleport tới điểm farm.
--- Không dùng cờ toàn cục, để các nhiệm vụ BestArea về sau vẫn có thể teleport lại.
--- Collect has its own box because these quests use a different method than BestArea farming.
+
+
+--box collect
 -- Add the specific collect behavior here when ready; do not teleport to BestArea by default.
 QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
     if not isEnabled() then
@@ -555,7 +536,7 @@ QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
 
     print("[DYU HUB] Collect quest detected; dedicated Collect box selected: " .. tostring(questTitle))
 end
-
+--boxarea
 QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
     if not isEnabled() then
         return
@@ -586,7 +567,7 @@ end
 -- QuestScriptBoxes.BestAreaEvent = function(questTitle, rank, isEnabled)
 --     -- Best Area + spawn event farming code.
 -- end
---
+--box legend
 QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
         "Veilroot Egg",
@@ -595,7 +576,7 @@ QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
         isEnabled
     )
 end
-
+--box egg
 QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
         "Hollow Egg",
