@@ -249,6 +249,49 @@ local QuestRankPaths = {
 -- Current BuyMax hatch amount, refreshed continuously from the game's UI.
 -- Auto Hatch reads this shared value so the requested amount can change during farming.
 local CurrentMaxEggHatchAmount = 1
+local function GetBuyMaxButton()
+    local playerGui = Player:FindFirstChild("PlayerGui")
+    local misc = playerGui and playerGui:FindFirstChild("_MISC")
+    local buyMultiple = misc and misc:FindFirstChild("BuyMultiple")
+    local frame = buyMultiple and buyMultiple:FindFirstChild("Frame")
+    local contents = frame and frame:FindFirstChild("Contents")
+    local buyMax = contents and contents:FindFirstChild("BuyMax")
+    if not buyMax then
+        return nil
+    end
+
+    if buyMax:IsA("GuiButton") then
+        return buyMax
+    end
+
+    for _, object in ipairs(buyMax:GetDescendants()) do
+        if object:IsA("GuiButton") then
+            return object
+        end
+    end
+
+    return nil
+end
+
+local function ClickBuyMaxButton()
+    local button = GetBuyMaxButton()
+    if not button then
+        warn("[DYU HUB] Không tìm thấy nút Buy Max dạng GuiButton trong PlayerGui._MISC.BuyMultiple.")
+        return false
+    end
+
+    local ok, err = pcall(function()
+        button:Activate()
+    end)
+
+    if not ok then
+        warn("[DYU HUB] Không thể kích hoạt nút Buy Max: " .. tostring(err))
+        return false
+    end
+
+    return true
+end
+
 local function RefreshMaxEggHatchAmount()
     local playerGui = Player:FindFirstChild("PlayerGui")
     local misc = playerGui and playerGui:FindFirstChild("_MISC")
@@ -285,8 +328,13 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
         warn("[DYU HUB] Không thể teleport cho nhiệm vụ " .. tostring(questTitle) .. ": " .. tostring(teleportError))
         return
     end
-    -- Both egg quests wait one second after teleporting before the first hatch.
-    task.wait(2)
+    -- Initialize the game's hatch quantity selection through the actual Buy Max UI button.
+    task.wait(1)
+    if not isEnabled() then return end
+    ClickBuyMaxButton()
+    task.wait(0.5)
+    local hatchAmount = RefreshMaxEggHatchAmount()
+    print("[DYU HUB] Auto hatch chuẩn bị: egg=" .. tostring(eggName) .. ", amount=" .. tostring(hatchAmount) .. ", quest=" .. tostring(questTitle))
     if not isEnabled() then return end
     local remote
     local ok, err = pcall(function()
@@ -299,14 +347,16 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     -- Do not read progress here. The Auto Farm Quest scanner stops this loop
     -- by invalidating isEnabled() when it detects full progress or a new quest.
     while isEnabled() do
+        local amount = RefreshMaxEggHatchAmount()
         local success, result = pcall(function()
-            return remote:InvokeServer(eggName, RefreshMaxEggHatchAmount())
+            return remote:InvokeServer(eggName, amount)
         end)
         if not success then
-            warn("[DYU HUB] Auto hatch " .. eggName .. " lỗi: " .. tostring(result))
+            warn("[DYU HUB] Auto hatch " .. eggName .. " lỗi (amount=" .. tostring(amount) .. "): " .. tostring(result))
             task.wait(1)
         else
-            task.wait(0.25)
+            print("[DYU HUB] Auto hatch response: egg=" .. tostring(eggName) .. ", amount=" .. tostring(amount) .. ", result=" .. tostring(result))
+            task.wait(0.75)
         end
     end
 end
