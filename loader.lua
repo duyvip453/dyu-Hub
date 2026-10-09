@@ -114,17 +114,30 @@ LoadConfig()
 local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
-if not success or not rawCode or rawCode == "" then
+if not success or type(rawCode) ~= "string" or rawCode == "" then
     return
 end
-local UIModule = loadstring(rawCode)()
-local Window = UIModule:Init({
+local compileUI = loadstring(rawCode)
+if type(compileUI) ~= "function" then
+    return
+end
+local moduleOk, UIModule = pcall(compileUI)
+if not moduleOk or type(UIModule) ~= "table" or type(UIModule.Init) ~= "function" then
+    return
+end
+local initOk, Window = pcall(function()
+    return UIModule:Init({
+        ConfigurationSaving = {
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "DYU_HUB",
         FileName = "Config"
-    }
-})
+        }
+    })
+end)
+if not initOk or type(Window) ~= "table" or type(Window.CreateTab) ~= "function" then
+    return
+end
 local Tab1 = Window:CreateTab({
     Name = "chơi đê",
     Icon = "person",
