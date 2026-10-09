@@ -2,20 +2,27 @@ local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
-local Settings = { 
-    JumpToggle = false, 
-    SpeedSlider = 16
+local Settings = {
+    JumpToggle = false,
+    SpeedSlider = 16,
+    AutoUpgradeEggs = false
 }
 local function SaveConfig()
-    writefile(ConfigFileName, HttpService:JSONEncode(Settings :: any))
+    pcall(function()
+        writefile(ConfigFileName, HttpService:JSONEncode(Settings))
+    end)
 end
 local function LoadConfig()
-    if isfile(ConfigFileName) then
-        local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFileName)) end)
-        if success and type(decoded) == "table" then
-            for k, v in pairs(decoded) do Settings[k] = v end
-        else
-            SaveConfig()
+    local ok, data = pcall(function()
+        if isfile(ConfigFileName) then
+            return HttpService:JSONDecode(readfile(ConfigFileName))
+        end
+    end)
+    if ok and type(data) == "table" then
+        for k, v in pairs(data) do
+            if Settings[k] ~= nil and type(v) == type(Settings[k]) then
+                Settings[k] = v
+            end
         end
     else
         SaveConfig()
@@ -100,45 +107,29 @@ task.spawn(function()
 end)
 --endrank
 
--- Auto Upgrade Eggs (đặt trong Tab 1)
-local UpgradeRemote = ReplicatedStorage
-    :WaitForChild("Network")
-    :WaitForChild("EggHatchSlotsMachine_RequestPurchase")
-
-local AUTO_UPGRADE_ID = 20 -- ID lấy từ log SimpleSpy hiện tại
+local UpgradeRemote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+local AUTO_UPGRADE_ID = 20
 local AUTO_UPGRADE_INTERVAL = 2
 local autoUpgradeRunning = false
-
 Tab1:CreateSection("Nâng cấp")
 Tab1:CreateToggle({
     Name = "Auto nâng trứng",
-    CurrentValue = false,
+    CurrentValue = Settings.AutoUpgradeEggs,
     Flag = "AutoUpgradeEggsToggle",
     Callback = function(Value)
+        Settings.AutoUpgradeEggs = Value
+        SaveConfig()
         autoUpgradeRunning = Value
-
-        if not autoUpgradeRunning then
-            warn("[DYU HUB] Auto nâng trứng: ĐÃ TẮT")
-            return
-        end
-
-        warn("[DYU HUB] Auto nâng trứng: ĐÃ BẬT")
-
+        if not Value then return end
         task.spawn(function()
             while autoUpgradeRunning do
-                local ok, result = pcall(function()
-                    return UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
+                pcall(function()
+                    UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
                 end)
-
-                if not ok then
-                    warn("[DYU HUB] Nâng trứng thất bại:", result)
-                end
-
                 task.wait(AUTO_UPGRADE_INTERVAL)
             end
         end)
     end
 })
---endegg
 task.wait(0.5)
 isLoaded = true
