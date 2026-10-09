@@ -1,6 +1,8 @@
+-- [START] Tải thư viện Luna UI từ nguồn ngoài và khai báo module DYU HUB
 local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
 local UIModule = {}
 
+-- [START] Cấu hình cửa sổ, logo, loading và thiết lập giao diện
 function UIModule:Init()
 local Window = Luna:CreateWindow({
 	Name = "DYU HUB", -- This Is Title Of Your Window
@@ -31,4 +33,6 @@ local Window = Luna:CreateWindow({
 })
 	return Window
 end
+-- [END] Cấu hình và khởi tạo cửa sổ
 return UIModule
+-- [END] Module giao diện DYU HUB
