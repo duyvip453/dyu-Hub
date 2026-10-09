@@ -9,10 +9,10 @@ local Settings = {
     AutoUpgradeEggs = false,
     AutoUpdateEgg = false,
     AutoUpdatePet = false,
-    AutoQuestBestArea = false,
-    AutoQuestEggs = false,
-    AutoQuestEvent = false,
-    AutoQuestInventory = false
+    AutoQuestEasy = false,
+    AutoQuestMedium = false,
+    AutoQuestHard = false,
+    AutoQuestExtreme = false
 }
 
 local function SaveConfig()
@@ -105,163 +105,6 @@ if RankTextObject then
     RankTextObject.TextSize = 28
     RankTextObject.Font = Enum.Font.GothamBold
 end
-Tab1:CreateSection("Auto Farm Quest")
-
-local QuestGroupEnabled = {
-    BestArea = Settings.AutoQuestBestArea,
-    Eggs = Settings.AutoQuestEggs,
-    BestAreaEvent = Settings.AutoQuestEvent,
-    InventoryItems = Settings.AutoQuestInventory
-}
-
-local QuestScriptRouter = {
-    BestArea = nil,
-    Eggs = nil,
-    BestAreaEvent = nil,
-    InventoryItems = nil
-}
-
-local LastDispatchedQuest = {}
-
-local function NormalizeQuestText(text)
-    text = string.lower(tostring(text or ""))
-    text = text:gsub("[%d,%.]", " ")
-    text = text:gsub("%s+", " ")
-    return text
-end
-
-local function IdentifyQuestGroup(questTitle)
-    local text = NormalizeQuestText(questTitle)
-
-    if (
-        text:find("hatch") and (
-            text:find("best egg") or
-            text:find("legendary") or
-            text:find("or above")
-        )
-    ) or (
-        text:find("make") and (
-            text:find("rainbow pets") or
-            text:find("golden pets")
-        ) and text:find("best egg")
-    ) then
-        return "Eggs"
-    end
-
-    if text:find("use") and (
-        text:find("tier") and text:find("potion") or
-        text:find("flags")
-    ) then
-        return "InventoryItems"
-    end
-
-    if (
-        text:find("trigger") and text:find("lucky blocks")
-    ) or (
-        text:find("break") and text:find("in best area") and (
-            text:find("comets") or
-            text:find("mini%-chests") or
-            text:find("coin jars") or
-            text:find("piñatas") or
-            text:find("pinatas")
-        )
-    ) then
-        return "BestAreaEvent"
-    end
-
-    if (
-        text:find("break") and text:find("breakables") and text:find("in best area")
-    ) or (
-        text:find("superior mini%-chest") and text:find("in best area")
-    ) or (
-        text:find("collect") and (
-            text:find("potions") or text:find("enchants")
-        )
-    ) or (
-        text:find("diamond breakables")
-    ) or (
-        text:find("earn") and text:find("diamonds")
-    ) then
-        return "BestArea"
-    end
-
-    return nil
-end
-
-local function HandleRecognizedQuest(questTitle, questGroup, difficulty)
-    local scriptHandler = QuestScriptRouter[questGroup]
-    if type(scriptHandler) ~= "function" then
-        return
-    end
-
-    local questKey = difficulty .. ":" .. questGroup
-    if LastDispatchedQuest[questKey] == questTitle then
-        return
-    end
-
-    LastDispatchedQuest[questKey] = questTitle
-    task.spawn(function()
-        local ok, err = pcall(scriptHandler, questTitle, difficulty)
-        if not ok then
-            warn("[DYU HUB] Quest handler error (" .. questGroup .. "): " .. tostring(err))
-        end
-    end)
-end
-
-local function SetQuestGroupEnabled(groupName, value)
-    QuestGroupEnabled[groupName] = value
-
-    for key in pairs(LastDispatchedQuest) do
-        if key:find(":" .. groupName, 1, true) then
-            LastDispatchedQuest[key] = nil
-        end
-    end
-
-    if groupName == "BestArea" then
-        Settings.AutoQuestBestArea = value
-    elseif groupName == "Eggs" then
-        Settings.AutoQuestEggs = value
-    elseif groupName == "BestAreaEvent" then
-        Settings.AutoQuestEvent = value
-    elseif groupName == "InventoryItems" then
-        Settings.AutoQuestInventory = value
-    end
-
-    SaveConfig()
-end
-
-Tab1:CreateToggle({
-    Name = "Quest: Best Area",
-    CurrentValue = QuestGroupEnabled.BestArea,
-    Callback = function(Value)
-        SetQuestGroupEnabled("BestArea", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Quest: Hatch Eggs",
-    CurrentValue = QuestGroupEnabled.Eggs,
-    Callback = function(Value)
-        SetQuestGroupEnabled("Eggs", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Quest: Best Area + Event",
-    CurrentValue = QuestGroupEnabled.BestAreaEvent,
-    Callback = function(Value)
-        SetQuestGroupEnabled("BestAreaEvent", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Quest: Inventory Items",
-    CurrentValue = QuestGroupEnabled.InventoryItems,
-    Callback = function(Value)
-        SetQuestGroupEnabled("InventoryItems", Value)
-    end
-})
-
 Tab1:CreateSection("Nhiệm vụ")
 local EasyLabel = Tab1:CreateLabel({Text="Easy: Đang tải...",Style=1})
 local MediumLabel = Tab1:CreateLabel({Text="Medium: Đang tải...",Style=1})
@@ -289,22 +132,6 @@ task.spawn(function()
             local Hard = QuestsHolder:FindFirstChild("Hard")
             local Extreme = QuestsHolder:FindFirstChild("Extreme")
 
-            local function ProcessQuest(questFrame, difficulty)
-                if not questFrame or not questFrame:FindFirstChild("Title") then
-                    return
-                end
-
-                local title = questFrame.Title.Text
-                local group = IdentifyQuestGroup(title)
-                if group and QuestGroupEnabled[group] then
-                    HandleRecognizedQuest(title, group, difficulty)
-                end
-            end
-
-            ProcessQuest(Easy, "Easy")
-            ProcessQuest(Medium, "Medium")
-            ProcessQuest(Hard, "Hard")
-            ProcessQuest(Extreme, "Extreme")
             if Easy and Easy:FindFirstChild("Title") and Easy:FindFirstChild("Progress") then
                 EasyLabel:Set(Easy.Title.Text .. " | " .. Easy.Progress.Text)
             end
@@ -397,3 +224,207 @@ end
 
 task.wait(0.5)
 isLoaded = true
+
+Tab1:CreateSection("Auto Farm Quest")
+
+local QuestRankEnabled = {
+    Easy = Settings.AutoQuestEasy,
+    Medium = Settings.AutoQuestMedium,
+    Hard = Settings.AutoQuestHard,
+    Extreme = Settings.AutoQuestExtreme
+}
+
+local QuestRankPaths = {
+    Easy = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Easy", "Title"},
+    Medium = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Medium", "Title"},
+    Hard = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Hard", "Title"},
+    Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme", "Title"}
+}
+
+local QuestScriptRouter = {
+    BestArea = nil,
+
+    Eggs = nil,
+
+    BestAreaEvent = nil,
+
+    InventoryItems = nil
+}
+
+local LastDispatchedQuest = {}
+
+local function GetQuestTitleFromPath(path)
+    local current = Player:FindFirstChild("PlayerGui")
+    if not current then
+        return nil
+    end
+
+    for _, name in ipairs(path) do
+        current = current:FindFirstChild(name)
+        if not current then
+            return nil
+        end
+    end
+
+    if current:IsA("TextLabel") or current:IsA("TextButton") or current:IsA("TextBox") then
+        return current.Text
+    end
+
+    return nil
+end
+
+local function NormalizeQuestText(text)
+    text = string.lower(tostring(text or ""))
+    text = text:gsub("[%d,%.]", " ")
+    text = text:gsub("%s+", " ")
+    return text
+end
+
+local function IdentifyQuestGroup(questTitle)
+    local text = NormalizeQuestText(questTitle)
+
+    if (
+        text:find("hatch") and (
+            text:find("best egg") or
+            text:find("legendary") or
+            text:find("or above")
+        )
+    ) or (
+        text:find("make") and (
+            text:find("rainbow pets") or
+            text:find("golden pets")
+        ) and text:find("best egg")
+    ) then
+        return "Eggs"
+    end
+
+    if text:find("use") and (
+        (text:find("tier") and text:find("potion")) or
+        text:find("flags")
+    ) then
+        return "InventoryItems"
+    end
+
+    if (
+        text:find("trigger") and text:find("lucky blocks")
+    ) or (
+        text:find("break") and text:find("in best area") and (
+            text:find("comets") or
+            text:find("mini%-chests") or
+            text:find("coin jars") or
+            text:find("piñatas") or
+            text:find("pinatas")
+        )
+    ) then
+        return "BestAreaEvent"
+    end
+
+    if (
+        text:find("break") and text:find("breakables") and text:find("in best area")
+    ) or (
+        text:find("superior mini%-chest") and text:find("in best area")
+    ) or (
+        text:find("collect") and (
+            text:find("potions") or text:find("enchants")
+        )
+    ) or (
+        text:find("diamond breakables")
+    ) or (
+        text:find("earn") and text:find("diamonds")
+    ) then
+        return "BestArea"
+    end
+
+    return nil
+end
+
+local function HandleRecognizedQuest(questTitle, questGroup, rank)
+    local scriptHandler = QuestScriptRouter[questGroup]
+    if type(scriptHandler) ~= "function" then
+        return
+    end
+
+    local questKey = rank .. ":" .. questGroup
+    if LastDispatchedQuest[questKey] == questTitle then
+        return
+    end
+
+    LastDispatchedQuest[questKey] = questTitle
+    task.spawn(function()
+        local ok, err = pcall(scriptHandler, questTitle, rank)
+        if not ok then
+            warn("[DYU HUB] Quest handler error (" .. questGroup .. "): " .. tostring(err))
+        end
+    end)
+end
+
+local function SetQuestRankEnabled(rank, value)
+    QuestRankEnabled[rank] = value
+    Settings["AutoQuest" .. rank] = value
+    LastDispatchedQuest[rank .. ":BestArea"] = nil
+    LastDispatchedQuest[rank .. ":Eggs"] = nil
+    LastDispatchedQuest[rank .. ":BestAreaEvent"] = nil
+    LastDispatchedQuest[rank .. ":InventoryItems"] = nil
+    SaveConfig()
+end
+
+Tab1:CreateToggle({
+    Name = "Auto Farm Quest - Easy",
+    CurrentValue = QuestRankEnabled.Easy,
+    Callback = function(Value)
+        SetQuestRankEnabled("Easy", Value)
+    end
+})
+
+Tab1:CreateToggle({
+    Name = "Auto Farm Quest - Medium",
+    CurrentValue = QuestRankEnabled.Medium,
+    Callback = function(Value)
+        SetQuestRankEnabled("Medium", Value)
+    end
+})
+
+Tab1:CreateToggle({
+    Name = "Auto Farm Quest - Hard",
+    CurrentValue = QuestRankEnabled.Hard,
+    Callback = function(Value)
+        SetQuestRankEnabled("Hard", Value)
+    end
+})
+
+Tab1:CreateToggle({
+    Name = "Auto Farm Quest - Extreme",
+    CurrentValue = QuestRankEnabled.Extreme,
+    Callback = function(Value)
+        SetQuestRankEnabled("Extreme", Value)
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.5) do
+        for rank, path in pairs(QuestRankPaths) do
+            if QuestRankEnabled[rank] then
+                local title = GetQuestTitleFromPath(path)
+                if title and title ~= "" then
+                    local group = IdentifyQuestGroup(title)
+                    if group then
+                        HandleRecognizedQuest(title, group, rank)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- SCRIPT SLOT: BestArea
+-- Add the BestArea handler here.
+
+-- SCRIPT SLOT: Eggs
+-- Add the Eggs handler here.
+
+-- SCRIPT SLOT: BestAreaEvent
+-- Add the BestAreaEvent handler here.
+
+-- SCRIPT SLOT: InventoryItems
+-- Add the InventoryItems handler here.
+
