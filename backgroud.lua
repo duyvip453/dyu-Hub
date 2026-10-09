@@ -1,5 +1,18 @@
 -- [START] Tải thư viện Luna UI từ nguồn ngoài và khai báo module DYU HUB
-local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
+local sourceOk, sourceCode = pcall(function()
+    return game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true)
+end)
+if not sourceOk or type(sourceCode) ~= "string" or sourceCode == "" then
+    return nil
+end
+local compileLuna = loadstring(sourceCode)
+if type(compileLuna) ~= "function" then
+    return nil
+end
+local lunaOk, Luna = pcall(compileLuna)
+if not lunaOk or type(Luna) ~= "table" or type(Luna.CreateWindow) ~= "function" then
+    return nil
+end
 local UIModule = {}
 
 -- [START] Cấu hình cửa sổ, logo, loading và thiết lập giao diện
