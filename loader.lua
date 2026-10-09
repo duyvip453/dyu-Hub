@@ -113,27 +113,29 @@ Tab1:CreateToggle({
     Name = "Auto Update Egg slot",
     CurrentValue = false,
     Callback = function(Value)
-AutoUpdateEgg = Value
+        AutoUpdateEgg = Value
 
-    if Value then
-        task.spawn(function()
-            local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
-            local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
-            local id = 22
+        if Value then
+            task.spawn(function()
+                local network = ReplicatedStorage:WaitForChild("Network")
+                local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
 
-            while AutoUpdateEgg do
-                for id = 1, 80 do
-                    if not AutoUpdatePet then
-                        break
+                while AutoUpdateEgg do
+                    for id = 1, 60 do
+                        if not AutoUpdateEgg then
+                            break
+                        end
+
+                        pcall(function()
+                            remote:InvokeServer(id)
+                        end)
+
+                        task.wait(0.5)
                     end
-                    pcall(function()
-                        remote:InvokeServer(id)
-                    end)
-                    task.wait(0.5)
-            end
-        end)
+                end
+            end)
+        end
     end
-end
 })
 --endeggupd
 local AutoUpdatePet = false
@@ -146,22 +148,26 @@ Tab1:CreateToggle({
 
         if Value then
             task.spawn(function()
-                local remote = game:GetService("ReplicatedStorage")
-                    :WaitForChild("Network")
-                    :WaitForChild("EquipSlotsMachine_RequestPurchase")
+                local network = ReplicatedStorage:WaitForChild("Network")
+                local remote = network:WaitForChild("EquipSlotsMachine_RequestPurchase")
 
                 while AutoUpdatePet do
                     for id = 1, 60 do
                         if not AutoUpdatePet then
                             break
                         end
+
                         pcall(function()
                             remote:InvokeServer(id)
                         end)
+
                         task.wait(0.5)
                     end
                 end
             end)
         end
+    end
+})
+
 task.wait(0.5)
 isLoaded = true
