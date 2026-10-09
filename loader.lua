@@ -410,7 +410,7 @@ local function NormalizeQuestText(value, keepNumbers)
     return text
 end
 local QuestMatchRules = {
-    -- Make is checked first and keeps numbers for identifying the requested pet.
+    -- MakePet is checked first; its box distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
     -- LegendaryEggs is handled by the explicit BOTH-keywords check in IdentifyQuestGroup.
     -- Generic Eggs only matches "hatch" when the title does not mention "legend".
@@ -649,6 +649,72 @@ end
 --     -- Inventory-item usage code.
 -- end
 --
--- QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
---     -- Make-pet code; keep the original questTitle numbers.
--- end
+-- MakePet: Golden consumes normal pets; Rainbow consumes Golden pets only.
+-- The machine remotes require the inventory pet ID and the amount to consume.
+QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
+    if not isEnabled() then
+        return
+    end
+
+    local title = string.lower(tostring(questTitle or ""))
+    local machineName
+    local remoteName
+    local petId
+    local amount
+
+    -- Keep these IDs separate: RainbowMachine_Activate receives the Golden-pet ID.
+    if title:find("rainbow", 1, true) then
+        machineName = "Rainbow"
+        remoteName = "RainbowMachine_Activate"
+        petId = "192c592642a445c8963250710c12bf69"
+    elseif title:find("golden", 1, true) then
+        machineName = "Golden"
+        remoteName = "GoldMachine_Activate"
+        petId = "f69b09dd148145e19181cbb9d7ff31a1"
+    else
+        warn("[DYU HUB] MakePet: không xác định được loại máy từ nhiệm vụ: " .. tostring(questTitle))
+        return
+    end
+
+    -- Quest titles can include a requested count. Use it only when it is explicitly present.
+    local requested = tonumber(title:match("make%s+([%d,]+)"))
+    if requested then
+        requested = tonumber(tostring(requested):gsub(",", ""))
+    end
+
+    -- Machine argument is the quantity of input pets, not the output-pet count:
+    -- 10 normal pets -> 1 Golden; 10 Golden pets -> 1 Rainbow.
+    if requested and requested > 0 then
+        amount = math.floor(requested)
+        if machineName == "Rainbow" then
+            amount = amount * 10
+        elseif machineName == "Golden" then
+            amount = amount * 10
+        end
+    else
+        -- Do not guess a quantity if the quest title does not specify one.
+        warn("[DYU HUB] MakePet: không đọc được số lượng trong tiêu đề nhiệm vụ; bỏ qua để tránh tạo sai số lượng: " .. tostring(questTitle))
+        return
+    end
+
+    if not isEnabled() then
+        return
+    end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote then
+        warn("[DYU HUB] MakePet: không tìm thấy remote " .. remoteName)
+        return
+    end
+
+    local ok, result = pcall(function()
+        return remote:InvokeServer(petId, amount)
+    end)
+
+    if ok then
+        print("[DYU HUB] MakePet " .. machineName .. ": amount=" .. tostring(amount) .. ", result=" .. tostring(result))
+    else
+        warn("[DYU HUB] MakePet " .. machineName .. " thất bại: " .. tostring(result))
+    end
+end
