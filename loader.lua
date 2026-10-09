@@ -678,70 +678,135 @@ end
 -- MakePet: Golden consumes normal pets; Rainbow consumes Golden pets only.
 -- The machine remotes require the inventory pet ID and the amount to consume.
 QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
-    if not isEnabled() then
-        return
-    end
-
+    if not isEnabled() then return end
     local title = string.lower(tostring(questTitle or ""))
-    local machineName
-    local remoteName
-    local petId
-    local amount
-
-    -- Keep these IDs separate: RainbowMachine_Activate receives the Golden-pet ID.
     if title:find("rainbow", 1, true) then
-        machineName = "Rainbow"
-        remoteName = "RainbowMachine_Activate"
-        petId = "192c592642a445c8963250710c12bf69"
-    elseif title:find("golden", 1, true) then
-        machineName = "Golden"
-        remoteName = "GoldMachine_Activate"
-        petId = "f69b09dd148145e19181cbb9d7ff31a1"
-    else
-        warn("[DYU HUB] MakePet: không xác định được loại máy từ nhiệm vụ: " .. tostring(questTitle))
+        warn("[DYU HUB] MakePet Rainbow chưa được tự động bổ sung kiểm tra số lượng; hiện chỉ xử lý Golden.")
+        return
+    end
+    if not title:find("golden", 1, true) then
+        warn("[DYU HUB] MakePet: không xác định được nhiệm vụ Golden: " .. tostring(questTitle))
         return
     end
 
-    -- Quest titles can include a requested count. Use it only when it is explicitly present.
-    local requested = tonumber(title:match("make%s+([%d,]+)"))
-    if requested then
-        requested = tonumber(tostring(requested):gsub(",", ""))
+    local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
+    if not requested or requested < 1 then
+        warn("[DYU HUB] MakePet Golden: không đọc được số Golden cần tạo từ tiêu đề: " .. tostring(questTitle))
+        return
     end
+    requested = math.floor(requested)
+    local requiredNormalPets = requested * 10
 
-    -- Machine argument is the quantity of input pets, not the output-pet count:
-    -- 10 normal pets -> 1 Golden; 10 Golden pets -> 1 Rainbow.
-    if requested and requested > 0 then
-        amount = math.floor(requested)
-        if machineName == "Rainbow" then
-            amount = amount * 10
-        elseif machineName == "Golden" then
-            amount = amount * 10
+    -- Tìm Quantity trong ItemSlot cùng nhánh Pets của GoldMachine; Icon và Quantity nằm cùng slot.
+    local function GetGoldenInputQuantity()
+        local playerGui = Player:FindFirstChild("PlayerGui")
+        local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
+        local machine = machines and machines:FindFirstChild("GoldMachine")
+        local frame = machine and machine:FindFirstChild("Frame")
+        local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
+        local items = itemsFrame and itemsFrame:FindFirstChild("Items")
+        local pets = items and items:FindFirstChild("Pets")
+        if not pets then return nil end
+        local slots = {}
+        if pets.Name == "ItemSlot" then table.insert(slots, pets) end
+        for _, object in ipairs(pets:GetDescendants()) do
+            if object.Name == "ItemSlot" then table.insert(slots, object) end
         end
-    else
-        -- Do not guess a quantity if the quest title does not specify one.
-        warn("[DYU HUB] MakePet: không đọc được số lượng trong tiêu đề nhiệm vụ; bỏ qua để tránh tạo sai số lượng: " .. tostring(questTitle))
-        return
+        for _, slot in ipairs(slots) do
+            local icon = slot:FindFirstChild("Icon")
+            local quantity = slot:FindFirstChild("Quantity")
+            if icon and quantity and quantity:IsA("TextLabel") then
+                local raw = quantity.Text:gsub(",", ""):gsub("%s+", "")
+                local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
+                number = tonumber(number)
+                if number then
+                    local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
+                    return math.floor(number * multiplier), quantity
+                end
+                local digits = tonumber(raw:match("(%d+)"))
+                if digits then return digits, quantity end
+            end
+        end
+        return nil
     end
 
-    if not isEnabled() then
-        return
+    local function TeleportToHollowEgg()
+        local character = Player.Character or Player.CharacterAdded:Wait()
+        if not isEnabled() then return false end
+        local root = character:WaitForChild("HumanoidRootPart")
+        if not isEnabled() then return false end
+        local ok, err = pcall(function()
+            root.CFrame = CFrame.new(Vector3.new(-15044.67, 16.34, 2147.03))
+        end)
+        if not ok then
+            warn("[DYU HUB] MakePet Golden: teleport tới Hollow Egg thất bại: " .. tostring(err))
+            return false
+        end
+        return true
     end
 
-    local network = ReplicatedStorage:FindFirstChild("Network")
-    local remote = network and network:FindFirstChild(remoteName)
+    local function HatchUntilEnough()
+        if not TeleportToHollowEgg() then return false end
+        task.wait(1)
+        if not isEnabled() then return false end
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
+        end)
+        if not isEnabled() then return false end
+        ClickBuyMaxButton()
+        task.wait(0.5)
+        local remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
+        while isEnabled() do
+            local quantity = GetGoldenInputQuantity()
+            if quantity and quantity >= requiredNormalPets then
+                print("[DYU HUB] MakePet Golden: đủ pet (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), dừng hatch.")
+                return true
+            end
+            local hatchAmount = RefreshMaxEggHatchAmount()
+            local ok, err = pcall(function()
+                return remote:InvokeServer("Hollow Egg", hatchAmount)
+            end)
+            if not ok then
+                warn("[DYU HUB] MakePet Golden: mở Hollow Egg thất bại: " .. tostring(err))
+                task.wait(1)
+            else
+                task.wait(0.75)
+            end
+        end
+        return false
+    end
+
+    -- Golden cần đủ 10 pet thường cho mỗi Golden được yêu cầu.
+    local quantity = GetGoldenInputQuantity()
+    if not quantity then
+        warn("[DYU HUB] MakePet Golden: không tìm thấy Quantity TextLabel trong GoldMachine ItemSlot; dừng để tránh tạo sai.")
+        return
+    end
+    if quantity < requiredNormalPets then
+        print("[DYU HUB] MakePet Golden: thiếu pet thường (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), bắt đầu hatch Hollow Egg.")
+        if not HatchUntilEnough() then return end
+    end
+    if not isEnabled() then return end
+
+    -- Kiểm tra lại ngay trước khi gọi máy, phòng khi số lượng thay đổi.
+    quantity = GetGoldenInputQuantity()
+    if not quantity or quantity < requiredNormalPets then
+        warn("[DYU HUB] MakePet Golden: số pet không đủ ở lần kiểm tra cuối; chưa gọi máy.")
+        return
+    end
+    local remote = ReplicatedStorage:FindFirstChild("Network")
+    remote = remote and remote:FindFirstChild("GoldMachine_Activate")
     if not remote then
-        warn("[DYU HUB] MakePet: không tìm thấy remote " .. remoteName)
+        warn("[DYU HUB] MakePet Golden: không tìm thấy remote GoldMachine_Activate.")
         return
     end
-
     local ok, result = pcall(function()
-        return remote:InvokeServer(petId, amount)
+        return remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
     end)
-
     if ok then
-        print("[DYU HUB] MakePet " .. machineName .. ": amount=" .. tostring(amount) .. ", result=" .. tostring(result))
+        print("[DYU HUB] MakePet Golden: yêu cầu tạo " .. tostring(requested) .. " Golden, tiêu thụ " .. tostring(requiredNormalPets) .. " pet thường; result=" .. tostring(result))
     else
-        warn("[DYU HUB] MakePet " .. machineName .. " thất bại: " .. tostring(result))
+        warn("[DYU HUB] MakePet Golden thất bại: " .. tostring(result))
     end
 end
 -- [END] Box MakePet
