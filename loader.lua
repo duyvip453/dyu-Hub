@@ -372,8 +372,7 @@ end
 local QuestMatchRules = {
     -- Make is checked first and keeps numbers for identifying the requested pet.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
-    -- LegendaryEggs requires BOTH "hatch" and "legend" in the quest title.
-    {Group = "LegendaryEggs", Keywords = {"hatch", "legend"}},
+    -- LegendaryEggs is handled by the explicit BOTH-keywords check in IdentifyQuestGroup.
     -- Generic Eggs only matches "hatch" when the title does not mention "legend".
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
