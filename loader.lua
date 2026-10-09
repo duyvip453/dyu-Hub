@@ -1,7 +1,8 @@
 local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
+local ConfigFileName = "DYUHUB_Config.json"
+
 local Settings = {
     JumpToggle = false,
     SpeedSlider = 16,
@@ -9,25 +10,58 @@ local Settings = {
     AutoUpdateEgg = false,
     AutoUpdatePet = false
 }
+
 local function SaveConfig()
-    pcall(function()
+    if type(writefile) ~= "function" then
+        warn("[DYU HUB] Executor không hỗ trợ writefile; không thể lưu cấu hình.")
+        return false
+    end
+
+    local ok, err = pcall(function()
         writefile(ConfigFileName, HttpService:JSONEncode(Settings))
     end)
+
+    if not ok then
+        warn("[DYU HUB] Lưu cấu hình thất bại: " .. tostring(err))
+        return false
+    end
+
+    return true
 end
+
 local function LoadConfig()
-    local ok, data = pcall(function()
-        if isfile(ConfigFileName) then
-            return HttpService:JSONDecode(readfile(ConfigFileName))
-        end
+    if type(isfile) ~= "function" or type(readfile) ~= "function" then
+        warn("[DYU HUB] Executor không hỗ trợ isfile/readfile; dùng cấu hình mặc định.")
+        return
+    end
+
+    local existsOk, exists = pcall(function()
+        return isfile(ConfigFileName)
     end)
-    if ok and type(data) == "table" then
-        for k, v in pairs(data) do
-            if Settings[k] ~= nil and type(v) == type(Settings[k]) then
-                Settings[k] = v
-            end
-        end
-    else
+
+    if not existsOk then
+        warn("[DYU HUB] Không kiểm tra được file cấu hình.")
+        return
+    end
+
+    if not exists then
         SaveConfig()
+        return
+    end
+
+    local readOk, data = pcall(function()
+        return HttpService:JSONDecode(readfile(ConfigFileName))
+    end)
+
+    if not readOk or type(data) ~= "table" then
+        warn("[DYU HUB] Đọc file cấu hình lỗi; dùng cấu hình mặc định.")
+        return
+    end
+
+    for key, value in pairs(data) do
+        if Settings[key] ~= nil and type(value) == type(Settings[key]) then
+            Settings[key] = value
+        end
     end
 end
 
