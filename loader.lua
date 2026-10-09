@@ -122,14 +122,12 @@ Tab1:CreateToggle({
         autoUpgradeRunning = Value
         if not Value then return end
         task.spawn(function()
-            while autoUpgradeRunning do
-                pcall(function()
-                    UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
-                end)
-                task.wait(AUTO_UPGRADE_INTERVAL)
-            end
+    while autoUpgradeRunning do
+        local ok, result = pcall(function()
+            return UpgradeRemote:InvokeServer(20)
         end)
+        task.wait(2)
     end
-})
+end)
 task.wait(0.5)
 isLoaded = true
