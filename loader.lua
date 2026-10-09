@@ -357,20 +357,42 @@ end
 
 local function RefreshMaxEggHatchAmount()
     local playerGui = Player:FindFirstChild("PlayerGui")
-    local misc = playerGui and playerGui:FindFirstChild("_MISC")
-    local buyMultiple = misc and misc:FindFirstChild("BuyMultiple")
-    local frame = buyMultiple and buyMultiple:FindFirstChild("Frame")
-    local contents = frame and frame:FindFirstChild("Contents")
-    local buyMax = contents and contents:FindFirstChild("BuyMax")
-    local textLabel = buyMax and buyMax:FindFirstChild("TextLabel")
-    if not textLabel or not textLabel:IsA("TextLabel") then
+    local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
+    local eggSlotsMachine = machines and machines:FindFirstChild("EggSlotsMachine")
+    local frame = eggSlotsMachine and eggSlotsMachine:FindFirstChild("Frame")
+    local slots = frame and frame:FindFirstChild("Slots")
+    local items = slots and slots:FindFirstChild("Items")
+    local slotsSection = items and items:FindFirstChild("SlotsSection")
+    local slotsContainer = slotsSection and slotsSection:FindFirstChild("Slots")
+    if not slotsContainer then
         return CurrentMaxEggHatchAmount
     end
-    local amountText = textLabel.Text
-    local amount = tonumber(string.match(amountText, "%d+"))
-    if amount and amount >= 1 then
-        CurrentMaxEggHatchAmount = math.floor(amount)
+
+    local totalEggs = 0
+    local foundOwnedSlot = false
+
+    -- Mỗi OwnedSlot có Title dạng "+N Egg"; LockedSlot được tự động bỏ qua.
+    for _, slot in ipairs(slotsContainer:GetDescendants()) do
+        if slot.Name == "OwnedSlot" then
+            local title = slot:FindFirstChild("Title", true)
+            if title and title:IsA("TextLabel") then
+                local amountText = tostring(title.Text or "")
+                local amount = tonumber(amountText:match("%+(%d+)%s*[Ee]gg"))
+                    or tonumber(amountText:match("%+(%d+)"))
+                if amount and amount > 0 then
+                    totalEggs = totalEggs + math.floor(amount)
+                    foundOwnedSlot = true
+                end
+            end
+        end
     end
+
+    -- Chỉ cập nhật khi đã đọc được ít nhất một OwnedSlot hợp lệ,
+    -- tránh đặt amount về 0 nếu UI machine chưa tải xong.
+    if foundOwnedSlot then
+        CurrentMaxEggHatchAmount = math.max(1, totalEggs)
+    end
+
     return CurrentMaxEggHatchAmount
 end
 task.spawn(function()
