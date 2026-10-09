@@ -809,7 +809,7 @@ end
 QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
         "Hollow Egg",
-        Vector3.new(-15044.67, 16.34, 2147.03),
+        Vector3.new(-15043.85, 17.57, 2120.55),
         questTitle,
         isEnabled
     )
