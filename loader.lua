@@ -1,3 +1,4 @@
+-- [START] Khởi tạo dịch vụ, người chơi và tên file cấu hình
 local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -69,6 +70,9 @@ local function LoadConfig()
     end
 end
 
+-- [END] Lưu/đọc cấu hình
+
+-- [START] Tải module giao diện và tạo cửa sổ/tab chính
 LoadConfig()
 local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
@@ -91,6 +95,7 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 
+-- [START] Hiển thị Rank và tiến độ nhiệm vụ
 --rank
 local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
@@ -148,8 +153,9 @@ task.spawn(function()
     end
 end)
 --endrank
+-- [END] Hiển thị Rank và tiến độ nhiệm vụ
 
-
+-- [START] Auto Update Egg slot và Pet slot
 local AutoUpdateEgg = Settings.AutoUpdateEgg
 local AutoUpdatePet = Settings.AutoUpdatePet
 
@@ -224,8 +230,9 @@ if AutoUpdatePet then
     RunPetUpdater()
 end
 --endslot
+-- [END] Auto Update Egg slot và Pet slot
 
-
+-- [START] Auto Farm Quest: cấu hình rank, đọc UI, phân loại và điều phối nhiệm vụ
 task.wait(0.5)
 isLoaded = true
 
@@ -579,6 +586,9 @@ task.spawn(function()
     end
 end)
 
+-- [END] Auto Farm Quest: bộ quét tiến độ và điều phối nhiệm vụ
+
+-- [START] Các box xử lý riêng theo loại nhiệm vụ
 -- SCRIPT BOXES (keep these assignments at the bottom; fill in each function body).
 -- The loader calls a box by name: QuestScriptBoxes.BestArea(...), QuestScriptBoxes.Eggs(...), etc.
 -- The third argument is isEnabled(); check it in long-running loops and return when false.
@@ -586,6 +596,7 @@ end)
 -- BestArea: mỗi lần được dispatch cho một nhiệm vụ BestArea mới thì teleport tới điểm farm.
 
 
+-- [START] Box Collect: hiện chỉ nhận diện/log nhiệm vụ
 --box collect
 -- Add the specific collect behavior here when ready; do not teleport to BestArea by default.
 QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
@@ -595,6 +606,9 @@ QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
 
     print("[DYU HUB] Collect quest detected; dedicated Collect box selected: " .. tostring(questTitle))
 end
+-- [END] Box Collect
+
+-- [START] Box BestArea: teleport tới khu vực farm
 --boxarea
 QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
     if not isEnabled() then
@@ -622,10 +636,15 @@ QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
         warn("[DYU HUB] BestArea teleport thất bại: " .. tostring(err))
     end
 end
---
+-- [END] Box BestArea
+
+-- [START] Box BestAreaEvent: khung chờ bổ sung logic event
 -- QuestScriptBoxes.BestAreaEvent = function(questTitle, rank, isEnabled)
 --     -- Best Area + spawn event farming code.
 -- end
+-- [END] Box BestAreaEvent
+
+-- [START] Box LegendaryEggs: mở Veilroot Egg tại vị trí chỉ định
 --box legend
 QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
@@ -635,6 +654,9 @@ QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
         isEnabled
     )
 end
+-- [END] Box LegendaryEggs
+
+-- [START] Box Eggs: mở Hollow Egg tại vị trí chỉ định
 --box egg
 QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
@@ -644,11 +666,15 @@ QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
         isEnabled
     )
 end
---
+-- [END] Box Eggs
+
+-- [START] Box InventoryItems: khung chờ bổ sung logic dùng vật phẩm
 -- QuestScriptBoxes.InventoryItems = function(questTitle, rank, isEnabled)
 --     -- Inventory-item usage code.
 -- end
---
+-- [END] Box InventoryItems
+
+-- [START] Box MakePet: nhận diện Golden/Rainbow và gọi remote máy tương ứng
 -- MakePet: Golden consumes normal pets; Rainbow consumes Golden pets only.
 -- The machine remotes require the inventory pet ID and the amount to consume.
 QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
@@ -718,3 +744,5 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
         warn("[DYU HUB] MakePet " .. machineName .. " thất bại: " .. tostring(result))
     end
 end
+-- [END] Box MakePet
+-- [END] Các box xử lý riêng theo loại nhiệm vụ
