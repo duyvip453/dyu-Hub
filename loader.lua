@@ -429,6 +429,8 @@ local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
     Collect = nil,
+    CollectPotions = nil,
+    CollectEnchants = nil,
     LegendaryEggs = nil,
     Eggs = nil,
     InventoryItems = nil,
@@ -477,6 +479,8 @@ local QuestMatchRules = {
     -- Generic Eggs only matches "hatch" when the title does not mention "legend".
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
+    {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
+    {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
     {Group = "Collect", Keywords = {"collect"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
     {Group = "BestArea", Keywords = {"breakables", "mini-chests", "mini-chest", "superior mini-chest", "mini chest", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds"}}
@@ -666,6 +670,18 @@ QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
     print("[DYU HUB] Collect quest detected; dedicated Collect box selected: " .. tostring(questTitle))
 end
 -- [END] Box Collect
+
+-- [START] Box CollectPotions: khung trống, chưa triển khai script
+QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
+    -- Chưa triển khai theo yêu cầu.
+end
+-- [END] Box CollectPotions
+
+-- [START] Box CollectEnchants: khung trống, chưa triển khai script
+QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
+    -- Chưa triển khai theo yêu cầu.
+end
+-- [END] Box CollectEnchants
 
 -- [START] Box BestArea: teleport tới khu vực farm
 --boxarea
