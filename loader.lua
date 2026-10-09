@@ -122,11 +122,14 @@ AutoUpdateEgg = Value
             local id = 22
 
             while AutoUpdateEgg do
-                pcall(function()
-                    remote:InvokeServer(id)
-                end)
-                id += 1
-                task.wait(1)
+                for id = 1, 80 do
+                    if not AutoUpdatePet then
+                        break
+                    end
+                    pcall(function()
+                        remote:InvokeServer(id)
+                    end)
+                    task.wait(0.5)
             end
         end)
     end
