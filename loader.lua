@@ -417,8 +417,8 @@ task.spawn(function()
                     local complete = IsQuestProgressComplete(progress)
                     local now = os.clock()
 
-                    if state.ActiveQuest and complete then
-                        -- Loader independently confirms completion, then allows the UI to update.
+                    if state.ActiveQuest and (complete or title ~= state.ActiveQuest) then
+                        -- Completion may be observed as full progress or as the next title appearing first.
                         state.CompletedQuest = state.ActiveQuest
                         state.ActiveQuest = nil
                         state.ActiveGroup = nil
