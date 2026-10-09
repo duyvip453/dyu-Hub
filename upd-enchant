@@ -10,205 +10,205 @@ return {
             Enchant = "Strong Pets",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "2dd9d5d590964914b96e53f5d9737bab"
         },
         {
             Enchant = "Strong Pets",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "64caab22c7924383b5e46dc48085b6d4"
         },
         {
             Enchant = "Strong Pets",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "ee86dcfd6cf24157b26c68a578a16c2b"
         },
         {
             Enchant = "Strong Pets",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "beace615780540bebda2272b1746b4a7"
         },
         {
             Enchant = "Criticals",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "c52f32208dc741cda9b0cf7fed40de85"
         },
         {
             Enchant = "Criticals",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "3a0c98fe4d3f4b7b8ed262c03486d65b"
         },
         {
             Enchant = "Criticals",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "063ab8c7571444eca241a472e9bf15ab"
         },
         {
             Enchant = "Criticals",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "c79d7c8a1a814857a5c48e90f50f6fc0"
         },
         {
             Enchant = "Walkspeed",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "c8876346fa924fd99ce7372e808dd65a"
         },
         {
             Enchant = "Walkspeed",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "da989274ec7c4059bdfb2bb798a89d13"
         },
         {
             Enchant = "Walkspeed",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "941a3ff595da48f4978b15146b296557"
         },
         {
             Enchant = "Walkspeed",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "55caee1ce86e4766a34d46737b8f4782"
         },
         {
             Enchant = "Tap power",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "29469ce8780e4df29fcdbb918187b635"
         },
         {
             Enchant = "Tap power",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "b56c4e1473a04cff91235b179fd2d7fd"
         },
         {
             Enchant = "Tap power",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "cfd7b8e1dcca494b860c8c0a4903494d"
         },
         {
             Enchant = "Tap power",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "6929bced56164f39b3fec5e0d975a0f6"
         },
         {
             Enchant = "Diamonds",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "d5b5caae83144389ac59d845f303d8a1"
         },
         {
             Enchant = "Diamonds",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "83376fc567ae4de4847f204a0dc9976a"
         },
         {
             Enchant = "Diamonds",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "541569ed5b9f49cfa163b6069eacd2b2"
         },
         {
             Enchant = "Diamonds",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "987889543e1440dc88ef87b1bf471339"
         },
         {
             Enchant = "Lucky Eggs",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "68b52489b2e043dc802f7eb0157510b0"
         },
         {
             Enchant = "Lucky Eggs",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "a5dda4fb0f8c4859ba6ca3d6d887271b"
         },
         {
             Enchant = "Lucky Eggs",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "68a665fee69f4d229cd0e20eaf604581"
         },
         {
             Enchant = "Lucky Eggs",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "d63b8627b049412aa5eced7c804219bb"
         },
         {
             Enchant = "Magnet",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "1ae4d864fb9d40829fe024dbbfab9406"
         },
         {
             Enchant = "Magnet",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "11d5e2f1e99c4a86aea9f68424e73107"
         },
         {
             Enchant = "Treasure Hunter",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "ebb4c69b6b3747aebe0d5f4f18b4d6c7"
         },
         {
             Enchant = "Treasure Hunter",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "4e911223312f42c2a2a4627c36515f1c"
         },
         {
             Enchant = "Treasure Hunter",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "4e911223312f42c2a2a4627c36515f1c"
         },
         {
             Enchant = "Treasure Hunter",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "2a1837b66a224fffb1783da0ab06f52a"
         },
         {
             Enchant = "Coins",
             FromTier = 1,
             ToTier = 2,
-            Id = ""
+            Id = "052a70248b57416ea2a9c4579564d327"
         },
         {
             Enchant = "Coins",
             FromTier = 2,
             ToTier = 3,
-            Id = ""
+            Id = "ceb47032e2674a2ca35bc32ccbe981ba"
         },
         {
             Enchant = "Coins",
             FromTier = 3,
             ToTier = 4,
-            Id = ""
+            Id = "8d017b6c64bb4ecc905d5e583bed35c8"
         },
         {
             Enchant = "Coins",
             FromTier = 4,
             ToTier = 5,
-            Id = ""
+            Id = "dff91aa5eb1c42cc902b9b4d79dc18f6"
         }
     }
 }
