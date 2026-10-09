@@ -432,7 +432,9 @@ local QuestScriptBoxes = {
     LegendaryEggs = nil,
     Eggs = nil,
     InventoryItems = nil,
-    MakePet = nil
+    MakePet = nil,
+    UpdatePotion = nil,
+    UpdateEnchant = nil
 }
 local QuestRankState = {}
 for rank in pairs(QuestRankPaths) do
@@ -466,6 +468,9 @@ local function NormalizeQuestText(value, keepNumbers)
     return text
 end
 local QuestMatchRules = {
+    -- Upgrade potion/enchant must be checked before generic quest keywords.
+    {Group = "UpdatePotion", Keywords = {"upgrade potions"}},
+    {Group = "UpdateEnchant", Keywords = {"upgrade enchants"}},
     -- MakePet is checked first; its box distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
     -- LegendaryEggs is handled by the explicit BOTH-keywords check in IdentifyQuestGroup.
@@ -846,4 +851,123 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
     MakeAtMachine("RainbowMachine_Activate", "192c592642a445c8963250710c12bf69", requiredGoldenPets, "Rainbow")
 end
 -- [END] Box MakePet
+
+-- [START] Box UpdatePotion: xử lý nhiệm vụ Upgrade + Potions
+-- Dùng registry upd-potion; mỗi ID được thử tối đa một lần trong lượt nhiệm vụ.
+-- Bộ quét Auto Farm Quest sẽ hủy lượt chạy khi tiến độ hoàn tất hoặc toggle rank tắt.
+QuestScriptBoxes.UpdatePotion = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local entries = PotionUpgradeIDs and PotionUpgradeIDs.Entries
+    local remoteName = PotionUpgradeIDs and PotionUpgradeIDs.MachineRemote
+    if type(entries) ~= "table" or type(remoteName) ~= "string" then
+        warn("[DYU HUB] UpdatePotion: registry Potion không hợp lệ.")
+        return
+    end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then
+        warn("[DYU HUB] UpdatePotion: không tìm thấy RemoteFunction " .. tostring(remoteName))
+        return
+    end
+
+    local targetTier = tonumber(string.lower(tostring(questTitle)):match("tier%s*([ivx%d]+)"))
+    if targetTier then
+        local roman = {i=1, ii=2, iii=3, iv=4, v=5, vi=6}
+        targetTier = roman[tostring(targetTier):lower()] or targetTier
+    end
+
+    local attempted = {}
+    local usable = 0
+    for _, entry in ipairs(entries) do
+        if not isEnabled() then return end
+        local id = type(entry) == "table" and tostring(entry.Id or "") or ""
+        local toTier = type(entry) == "table" and tonumber(entry.ToTier) or nil
+        local tierMatches = not targetTier or toTier == targetTier
+
+        if id ~= "" and not attempted[id] and tierMatches then
+            attempted[id] = true
+            usable = usable + 1
+            local ok, result = pcall(function()
+                return remote:InvokeServer(id, 1)
+            end)
+            if ok then
+                print("[DYU HUB] UpdatePotion: đã thử ID cho " .. tostring(entry.Potion) ..
+                    " Tier " .. tostring(entry.FromTier) .. " -> " .. tostring(entry.ToTier) ..
+                    "; response=" .. tostring(result))
+            else
+                warn("[DYU HUB] UpdatePotion: gọi ID thất bại: " .. tostring(result))
+            end
+            task.wait(0.5)
+        end
+    end
+
+    if usable == 0 then
+        warn("[DYU HUB] UpdatePotion: không có ID hợp lệ phù hợp với tier của nhiệm vụ: " .. tostring(questTitle))
+    end
+end
+-- [END] Box UpdatePotion
+
+-- [START] Box UpdateEnchant: xử lý nhiệm vụ Upgrade + Enchants
+-- Chỉ dùng ID được đánh dấu Verified=true và có đủ FromTier/ToTier.
+QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries
+    local remoteName = EnchantUpgradeIDs and EnchantUpgradeIDs.MachineRemote
+    if type(entries) ~= "table" or type(remoteName) ~= "string" then
+        warn("[DYU HUB] UpdateEnchant: registry Enchant không hợp lệ.")
+        return
+    end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then
+        warn("[DYU HUB] UpdateEnchant: không tìm thấy RemoteFunction " .. tostring(remoteName))
+        return
+    end
+
+    local targetTier = tonumber(string.lower(tostring(questTitle)):match("tier%s*([ivx%d]+)"))
+    if targetTier then
+        local roman = {i=1, ii=2, iii=3, iv=4, v=5, vi=6}
+        targetTier = roman[tostring(targetTier):lower()] or targetTier
+    end
+
+    local attempted = {}
+    local usable = 0
+    for _, entry in ipairs(entries) do
+        if not isEnabled() then return end
+        local id = type(entry) == "table" and tostring(entry.Id or "") or ""
+        local toTier = type(entry) == "table" and tonumber(entry.ToTier) or nil
+        local valid = type(entry) == "table"
+            and entry.Verified == true
+            and id ~= ""
+            and entry.FromTier ~= nil
+            and entry.ToTier ~= nil
+            and (not targetTier or toTier == targetTier)
+
+        if valid and not attempted[id] then
+            attempted[id] = true
+            usable = usable + 1
+            local amount = math.max(1, math.floor(tonumber(entry.Amount) or 1))
+            local ok, result = pcall(function()
+                return remote:InvokeServer(id, amount)
+            end)
+            if ok then
+                print("[DYU HUB] UpdateEnchant: đã thử ID Tier " ..
+                    tostring(entry.FromTier) .. " -> " .. tostring(entry.ToTier) ..
+                    "; response=" .. tostring(result))
+            else
+                warn("[DYU HUB] UpdateEnchant: gọi ID thất bại: " .. tostring(result))
+            end
+            task.wait(0.5)
+        end
+    end
+
+    if usable == 0 then
+        warn("[DYU HUB] UpdateEnchant: không có ID đã xác minh phù hợp. Hãy bổ sung Verified=true, FromTier và ToTier trong upd-enchant.")
+    end
+end
+-- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
