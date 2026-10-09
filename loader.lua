@@ -482,9 +482,9 @@ local QuestMatchRules = {
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
     -- ROUTING GUARD: LegendaryEggs and Eggs are distinct Groups despite sharing "hatch".
     -- LegendaryEggs requires BOTH "hatch" and "legend"; keep it before the generic Eggs rule.
-    {Group = "LegendaryEggs", Keywords = {"hatch", "legend"}, MatchAll = true},
+    {Group = "LegendaryEggs", Keywords = {"hatch", "Legendary"}, MatchAll = true},
     -- Eggs accepts "hatch" only when the title does NOT contain "legend".
-    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"legend"}},
+    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"Legendary"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
