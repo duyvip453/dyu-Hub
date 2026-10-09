@@ -241,29 +241,24 @@ local QuestRankPaths = {
     Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme", "Title"}
 }
 
+-- Add each task's actual farming code in its matching slot at the bottom.
 local QuestScriptRouter = {
     BestArea = nil,
-
-    Eggs = nil,
-
     BestAreaEvent = nil,
-
-    InventoryItems = nil
+    Eggs = nil,
+    InventoryItems = nil,
+    MakePet = nil
 }
 
 local LastDispatchedQuest = {}
 
 local function GetQuestTitleFromPath(path)
     local current = Player:FindFirstChild("PlayerGui")
-    if not current then
-        return nil
-    end
+    if not current then return nil end
 
     for _, name in ipairs(path) do
         current = current:FindFirstChild(name)
-        if not current then
-            return nil
-        end
+        if not current then return nil end
     end
 
     if current:IsA("TextLabel") or current:IsA("TextButton") or current:IsA("TextBox") then
@@ -273,98 +268,58 @@ local function GetQuestTitleFromPath(path)
     return nil
 end
 
-local function NormalizeQuestText(text)
-    text = string.lower(tostring(text or ""))
-    text = text:gsub("[%d,%.]", " ")
+local function NormalizeQuestText(value, keepNumbers)
+    local text = string.lower(tostring(value or ""))
+    if not keepNumbers then
+        text = text:gsub("[%d,%.]", " ")
+    end
     text = text:gsub("%s+", " ")
     return text
 end
 
+local QuestMatchRules = {
+    -- Make is checked first and keeps numbers for identifying the requested pet.
+    {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
+    {Group = "Eggs", Keywords = {"hatch"}},
+    {Group = "InventoryItems", Keywords = {"use"}},
+    {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
+    {Group = "BestArea", Keywords = {"breakables", "diamond", "superior mini-chests", "superior mini-chest", "earn", "diamonds", "collect"}}
+}
+
 local function IdentifyQuestGroup(questTitle)
-    local text = NormalizeQuestText(questTitle)
+    local originalText = NormalizeQuestText(questTitle, true)
 
-    if (
-        text:find("hatch") and (
-            text:find("best egg") or
-            text:find("legendary") or
-            text:find("or above")
-        )
-    ) or (
-        text:find("make") and (
-            text:find("rainbow pets") or
-            text:find("golden pets")
-        ) and text:find("best egg")
-    ) then
-        return "Eggs"
+    for _, rule in ipairs(QuestMatchRules) do
+        local text = NormalizeQuestText(questTitle, rule.KeepNumbers == true)
+        for _, keyword in ipairs(rule.Keywords) do
+            if text:find(keyword, 1, true) then
+                return rule.Group, originalText
+            end
+        end
     end
 
-    if text:find("use") and (
-        (text:find("tier") and text:find("potion")) or
-        text:find("flags")
-    ) then
-        return "InventoryItems"
-    end
-
-    if (
-        text:find("trigger") and text:find("lucky blocks")
-    ) or (
-        text:find("break") and text:find("in best area") and (
-            text:find("comets") or
-            text:find("mini%-chests") or
-            text:find("coin jars") or
-            text:find("piñatas") or
-            text:find("pinatas")
-        )
-    ) then
-        return "BestAreaEvent"
-    end
-
-    if (
-        text:find("break") and text:find("breakables") and text:find("in best area")
-    ) or (
-        text:find("superior mini%-chest") and text:find("in best area")
-    ) or (
-        text:find("collect") and (
-            text:find("potions") or text:find("enchants")
-        )
-    ) or (
-        text:find("diamond breakables")
-    ) or (
-        text:find("earn") and text:find("diamonds")
-    ) then
-        return "BestArea"
-    end
-
-    return nil
+    return nil, originalText
 end
 
 local function HandleRecognizedQuest(questTitle, questGroup, rank)
     local scriptHandler = QuestScriptRouter[questGroup]
-    if type(scriptHandler) ~= "function" then
-        return
-    end
+    if type(scriptHandler) ~= "function" then return end
 
     local questKey = rank .. ":" .. questGroup
-    if LastDispatchedQuest[questKey] == questTitle then
-        return
-    end
+    if LastDispatchedQuest[questKey] == questTitle then return end
 
     LastDispatchedQuest[questKey] = questTitle
     task.spawn(function()
-        local ok, err = pcall(scriptHandler, questTitle, rank)
-        if not ok then
-            warn("[DYU HUB] Quest handler error (" .. questGroup .. "): " .. tostring(err))
-        end
+        pcall(scriptHandler, questTitle, rank)
     end)
 end
 
 local function SetQuestRankEnabled(rank, value)
     QuestRankEnabled[rank] = value
     Settings["AutoQuest" .. rank] = value
-    LastDispatchedQuest[rank .. ":BestArea"] = nil
-    LastDispatchedQuest[rank .. ":Eggs"] = nil
-    LastDispatchedQuest[rank .. ":BestAreaEvent"] = nil
-    LastDispatchedQuest[rank .. ":InventoryItems"] = nil
+    for _, group in ipairs({"BestArea", "BestAreaEvent", "Eggs", "InventoryItems", "MakePet"}) do
+        LastDispatchedQuest[rank .. ":" .. group] = nil
+    end
     SaveConfig()
 end
 
@@ -417,14 +372,26 @@ task.spawn(function()
 end)
 
 -- SCRIPT SLOT: BestArea
--- Add the BestArea handler here.
-
--- SCRIPT SLOT: Eggs
--- Add the Eggs handler here.
+-- QuestScriptRouter.BestArea = function(questTitle, rank)
+--     -- Put the Best Area script here.
+-- end
 
 -- SCRIPT SLOT: BestAreaEvent
--- Add the BestAreaEvent handler here.
+-- QuestScriptRouter.BestAreaEvent = function(questTitle, rank)
+--     -- Put the Best Area + spawn event script here.
+-- end
+
+-- SCRIPT SLOT: Eggs
+-- QuestScriptRouter.Eggs = function(questTitle, rank)
+--     -- Put the egg-hatching script here.
+-- end
 
 -- SCRIPT SLOT: InventoryItems
--- Add the InventoryItems handler here.
+-- QuestScriptRouter.InventoryItems = function(questTitle, rank)
+--     -- Put the inventory-item script here.
+-- end
 
+-- SCRIPT SLOT: MakePet
+-- QuestScriptRouter.MakePet = function(questTitle, rank)
+--     -- Put the make-pet script here; keep the original questTitle numbers.
+-- end
