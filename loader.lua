@@ -4,7 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 local Settings = { 
     JumpToggle = false, 
-    SpeedSlider = 16 
+    SpeedSlider = 16
 }
 local function SaveConfig()
     writefile(ConfigFileName, HttpService:JSONEncode(Settings :: any))
@@ -42,6 +42,46 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
+
+-- Auto Upgrade Eggs (đặt trong Tab 1)
+local UpgradeRemote = ReplicatedStorage
+    :WaitForChild("Network")
+    :WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+
+local AUTO_UPGRADE_ID = 20 -- ID lấy từ log SimpleSpy hiện tại
+local AUTO_UPGRADE_INTERVAL = 2
+local autoUpgradeRunning = false
+
+Tab1:CreateSection("Nâng cấp")
+Tab1:CreateButton({
+    Name = "Auto nâng trứng: Bật / Tắt",
+    Description = "Bấm một lần để chạy, bấm lại để dừng.",
+    Callback = function()
+        autoUpgradeRunning = not autoUpgradeRunning
+
+        if not autoUpgradeRunning then
+            warn("[DYU HUB] Auto nâng trứng: ĐÃ TẮT")
+            return
+        end
+
+        warn("[DYU HUB] Auto nâng trứng: ĐÃ BẬT")
+
+        task.spawn(function()
+            while autoUpgradeRunning do
+                local ok, result = pcall(function()
+                    return UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
+                end)
+
+                if not ok then
+                    warn("[DYU HUB] Nâng trứng thất bại:", result)
+                end
+
+                task.wait(AUTO_UPGRADE_INTERVAL)
+            end
+        end)
+    end
+})
+
 local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
 local RankTextObject
