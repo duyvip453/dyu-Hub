@@ -246,6 +246,7 @@ local QuestRankPaths = {
 local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
+    LegendaryEggs = nil,
     Eggs = nil,
     InventoryItems = nil,
     MakePet = nil
@@ -291,6 +292,8 @@ end
 local QuestMatchRules = {
     -- Make is checked first and keeps numbers for identifying the requested pet.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
+    -- Specific hatch quests mentioning Legendary must be matched before generic hatch quests.
+    {Group = "LegendaryEggs", Keywords = {"legendary"}},
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "BestAreaEvent", Keywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
@@ -486,8 +489,12 @@ end
 --     -- Best Area + spawn event farming code.
 -- end
 --
+-- QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
+--     -- Hatch Legendary eggs; separate from the generic Eggs group.
+-- end
+--
 -- QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
---     -- Egg-hatching code.
+--     -- Generic egg-hatching code.
 -- end
 --
 -- QuestScriptBoxes.InventoryItems = function(questTitle, rank, isEnabled)
