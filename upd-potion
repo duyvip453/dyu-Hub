@@ -1,1 +1,19 @@
-
+-- DYU HUB - Potion upgrade ID registry
+-- File này chỉ chứa dữ liệu; loader.lua tải file và đọc bảng PotionUpgradeIDs.
+-- Mỗi mục đại diện cho một ID đã xác minh. Bổ sung các ID còn thiếu khi có dữ liệu thực tế.
+return {
+    Version = 1,
+    MachineRemote = "UpgradePotionsMachine_Activate",
+    -- ID mẫu người dùng đã cung cấp; cần xác minh loại potion/tier tương ứng trong game.
+    Entries = {
+        {
+            Key = "UNVERIFIED_SAMPLE",
+            Id = "9b5c5fc3011d45f692a1d00564e01e45",
+            Amount = 5,
+            Potion = nil,
+            FromTier = nil,
+            ToTier = nil,
+            Verified = false
+        }
+    }
+}
