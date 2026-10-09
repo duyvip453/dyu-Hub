@@ -311,50 +311,8 @@ local QuestRankPaths = {
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
 -- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
--- Current BuyMax hatch amount, refreshed continuously from the game's UI.
--- Auto Hatch reads this shared value so the requested amount can change during farming.
+-- Số trứng lấy từ tổng các OwnedSlot trong EggSlotsMachine.
 local CurrentMaxEggHatchAmount = 1
-local function GetBuyMaxButton()
-    local playerGui = Player:FindFirstChild("PlayerGui")
-    local misc = playerGui and playerGui:FindFirstChild("_MISC")
-    local buyMultiple = misc and misc:FindFirstChild("BuyMultiple")
-    local frame = buyMultiple and buyMultiple:FindFirstChild("Frame")
-    local contents = frame and frame:FindFirstChild("Contents")
-    local buyMax = contents and contents:FindFirstChild("BuyMax")
-    if not buyMax then
-        return nil
-    end
-
-    if buyMax:IsA("GuiButton") then
-        return buyMax
-    end
-
-    for _, object in ipairs(buyMax:GetDescendants()) do
-        if object:IsA("GuiButton") then
-            return object
-        end
-    end
-
-    return nil
-end
-
-local function ClickBuyMaxButton()
-    local button = GetBuyMaxButton()
-    if not button then
-                return false
-    end
-
-    local ok, err = pcall(function()
-        button:Activate()
-    end)
-
-    if not ok then
-                return false
-    end
-
-    return true
-end
-
 local function RefreshMaxEggHatchAmount()
     local playerGui = Player:FindFirstChild("PlayerGui")
     local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
@@ -406,27 +364,11 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, 
     if not isEnabled() then return end
     local root = character:WaitForChild("HumanoidRootPart")
     if not isEnabled() then return end
-    local teleported, teleportError = pcall(function()
+    local teleported = pcall(function()
         root.CFrame = CFrame.new(targetPosition)
     end)
-    if not teleported then
-                return
-    end
-    -- Initialize the game's hatch-count state once before attempting any egg purchase.
-    task.wait(1)
-    if not isEnabled() then return end
-    local hatchCountInitOk, hatchCountInitResult = pcall(function()
-        return ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
-    end)
-    -- Kết quả khởi tạo hatch-count chưa được dùng; giữ lời gọi để khởi tạo trạng thái.
-    -- if hatchCountInitOk then
-    --     -- Chưa có xử lý kết quả được xác minh.
-    -- end
-    if not isEnabled() then return end
-    ClickBuyMaxButton()
-    task.wait(0.5)
-    local hatchAmount = RefreshMaxEggHatchAmount()
-        if not isEnabled() then return end
+    if not teleported or not isEnabled() then return end
+
     local remote
     local ok, err = pcall(function()
         remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
