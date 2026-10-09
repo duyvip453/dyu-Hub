@@ -328,8 +328,17 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
         warn("[DYU HUB] Không thể teleport cho nhiệm vụ " .. tostring(questTitle) .. ": " .. tostring(teleportError))
         return
     end
-    -- Initialize the game's hatch quantity selection through the actual Buy Max UI button.
+    -- Initialize the game's hatch-count state once before attempting any egg purchase.
     task.wait(1)
+    if not isEnabled() then return end
+    local hatchCountInitOk, hatchCountInitResult = pcall(function()
+        return ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
+    end)
+    if hatchCountInitOk then
+        print("[DYU HUB] Hatch count initialized before auto hatch: " .. tostring(hatchCountInitResult))
+    else
+        warn("[DYU HUB] Hatch count initialization failed: " .. tostring(hatchCountInitResult))
+    end
     if not isEnabled() then return end
     ClickBuyMaxButton()
     task.wait(0.5)
@@ -643,49 +652,3 @@ end
 -- QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
 --     -- Make-pet code; keep the original questTitle numbers.
 -- end
-
-
--- TEST TOGGLE: repeatedly activate Buy Max and request egg hatches while enabled.
-local AutoEggBuyMaxTest = false
-local AutoEggBuyMaxTestGeneration = 0
-
-Tab1:CreateToggle({
-    Name = "TEST - Auto Egg Buy Max Spam",
-    CurrentValue = false,
-    Callback = function(Value)
-        AutoEggBuyMaxTest = Value
-        AutoEggBuyMaxTestGeneration = AutoEggBuyMaxTestGeneration + 1
-        local generation = AutoEggBuyMaxTestGeneration
-
-        if not Value then
-            print("[DYU HUB] Auto Egg Buy Max test stopped.")
-            return
-        end
-
-        print("[DYU HUB] Auto Egg Buy Max test started. Stand within egg interaction range.")
-        task.spawn(function()
-            local network = ReplicatedStorage:WaitForChild("Network")
-            local remote = network:WaitForChild("Eggs_RequestPurchase")
-
-            while AutoEggBuyMaxTest and AutoEggBuyMaxTestGeneration == generation do
-                local clicked = ClickBuyMaxButton()
-                local amount = RefreshMaxEggHatchAmount()
-
-                local ok, result = pcall(function()
-                    return remote:InvokeServer("Hollow Egg", amount)
-                end)
-
-                if not clicked then
-                    warn("[DYU HUB] Test could not activate Buy Max UI button.")
-                end
-                if not ok then
-                    warn("[DYU HUB] Buy Max test hatch failed (amount=" .. tostring(amount) .. "): " .. tostring(result))
-                else
-                    print("[DYU HUB] Buy Max test: amount=" .. tostring(amount) .. ", result=" .. tostring(result))
-                end
-
-                task.wait(0.5)
-            end
-        end)
-    end
-})
