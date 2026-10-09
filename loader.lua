@@ -677,27 +677,63 @@ end)
 -- end
 -- [END] Box Collect
 
--- [START] Box CollectPotions: random ID potion và gọi máy nâng cấp cho tới khi quest kết thúc
--- Tạm vô hiệu hóa CollectPotions: chọn ID ngẫu nhiên giữa mọi tier có thể gửi sai bước nâng cấp.
--- Chỉ bật lại khi xác minh được tier hiện tại và quy tắc remote của game.
--- QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
---     if not isEnabled() then return end
---     local entries = PotionUpgradeIDs.Entries or {}
---     local network = ReplicatedStorage:FindFirstChild("Network")
---     local remote = network and network:FindFirstChild(PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate")
---     if not remote then return end
---     while isEnabled() do
---         -- Không gọi ID ngẫu nhiên: cần xác minh potion/tier trước khi thực thi.
---         return
---     end
--- end
+-- [START] Box CollectPotions: chọn ngẫu nhiên ID potion rồi gọi máy nâng cấp
+QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local entries = PotionUpgradeIDs.Entries or {}
+    local usableEntries = {}
+    for _, entry in ipairs(entries) do
+        if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+            table.insert(usableEntries, entry)
+        end
+    end
+    if #usableEntries == 0 then return end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remoteName = PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate"
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then return end
+
+    while isEnabled() do
+        local entry = usableEntries[math.random(1, #usableEntries)]
+        if not isEnabled() then break end
+        pcall(function()
+            remote:InvokeServer(entry.Id)
+        end)
+        task.wait(0.75)
+    end
+end
 -- [END] Box CollectPotions
 
--- [START] Box CollectEnchants: khung trống, chưa triển khai script
--- Chưa triển khai CollectEnchants; để comment cho đến khi có ID đã xác minh.
--- QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
---     -- Chưa có logic thực thi an toàn.
--- end
+-- [START] Box CollectEnchants: chọn ngẫu nhiên ID enchant rồi gọi máy nâng cấp
+QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local entries = EnchantUpgradeIDs.Entries or {}
+    local usableEntries = {}
+    for _, entry in ipairs(entries) do
+        if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+            -- Chỉ dùng những ID đã được điền; registry hiện để trống sẽ tự bỏ qua.
+            table.insert(usableEntries, entry)
+        end
+    end
+    if #usableEntries == 0 then return end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then return end
+
+    while isEnabled() do
+        local entry = usableEntries[math.random(1, #usableEntries)]
+        if not isEnabled() then break end
+        pcall(function()
+            remote:InvokeServer(entry.Id)
+        end)
+        task.wait(0.75)
+    end
+end
 -- [END] Box CollectEnchants
 
 -- [START] Box BestArea: teleport tới khu vực farm
