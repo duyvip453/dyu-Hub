@@ -5,7 +5,9 @@ local ConfigFileName = "DYUHUB_" .. game.PlaceId .. "_" .. Player.UserId .. ".js
 local Settings = {
     JumpToggle = false,
     SpeedSlider = 16,
-    AutoUpgradeEggs = false
+    AutoUpgradeEggs = false,
+    AutoUpdateEgg = false,
+    AutoUpdatePet = false
 }
 local function SaveConfig()
     pcall(function()
@@ -107,67 +109,79 @@ task.spawn(function()
     end
 end)
 --endrank
-local AutoUpdateEgg = false
+local AutoUpdateEgg = Settings.AutoUpdateEgg
+local AutoUpdatePet = Settings.AutoUpdatePet
+
+local function RunEggUpdater()
+    task.spawn(function()
+        local network = ReplicatedStorage:WaitForChild("Network")
+        local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+
+        while AutoUpdateEgg do
+            for id = 1, 60 do
+                if not AutoUpdateEgg then
+                    break
+                end
+                pcall(function()
+                    remote:InvokeServer(id)
+                end)
+                task.wait(0.5)
+            end
+        end
+    end)
+end
+
+local function RunPetUpdater()
+    task.spawn(function()
+        local network = ReplicatedStorage:WaitForChild("Network")
+        local remote = network:WaitForChild("EquipSlotsMachine_RequestPurchase")
+
+        while AutoUpdatePet do
+            for id = 1, 60 do
+                if not AutoUpdatePet then
+                    break
+                end
+                pcall(function()
+                    remote:InvokeServer(id)
+                end)
+                task.wait(0.5)
+            end
+        end
+    end)
+end
 
 Tab1:CreateToggle({
     Name = "Auto Update Egg slot",
-    CurrentValue = false,
+    CurrentValue = AutoUpdateEgg,
     Callback = function(Value)
         AutoUpdateEgg = Value
-
+        Settings.AutoUpdateEgg = Value
+        SaveConfig()
         if Value then
-            task.spawn(function()
-                local network = ReplicatedStorage:WaitForChild("Network")
-                local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
-
-                while AutoUpdateEgg do
-                    for id = 1, 60 do
-                        if not AutoUpdateEgg then
-                            break
-                        end
-
-                        pcall(function()
-                            remote:InvokeServer(id)
-                        end)
-
-                        task.wait(0.5)
-                    end
-                end
-            end)
+            RunEggUpdater()
         end
     end
 })
---endeggupd
-local AutoUpdatePet = false
 
 Tab1:CreateToggle({
     Name = "Auto Update pet slot",
-    CurrentValue = false,
+    CurrentValue = AutoUpdatePet,
     Callback = function(Value)
         AutoUpdatePet = Value
-
+        Settings.AutoUpdatePet = Value
+        SaveConfig()
         if Value then
-            task.spawn(function()
-                local network = ReplicatedStorage:WaitForChild("Network")
-                local remote = network:WaitForChild("EquipSlotsMachine_RequestPurchase")
-
-                while AutoUpdatePet do
-                    for id = 1, 60 do
-                        if not AutoUpdatePet then
-                            break
-                        end
-
-                        pcall(function()
-                            remote:InvokeServer(id)
-                        end)
-
-                        task.wait(0.5)
-                    end
-                end
-            end)
+            RunPetUpdater()
         end
     end
 })
+
+if AutoUpdateEgg then
+    RunEggUpdater()
+end
+if AutoUpdatePet then
+    RunPetUpdater()
+end
 
 task.wait(0.5)
 isLoaded = true
