@@ -294,22 +294,8 @@ end
 local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
-    LegendaryEggs = function(questTitle, rank, isEnabled)
-        RunQuestEggHatch(
-            "Veilroot Egg",
-            Vector3.new(-14887.31, 16.34, 2209.57),
-            questTitle,
-            isEnabled
-        )
-    end,
-    Eggs = function(questTitle, rank, isEnabled)
-        RunQuestEggHatch(
-            "Hollow Egg",
-            Vector3.new(-15044.67, 16.34, 2147.03),
-            questTitle,
-            isEnabled
-        )
-    end,
+    LegendaryEggs = nil,
+    Eggs = nil,
     InventoryItems = nil,
     MakePet = nil
 }
@@ -558,13 +544,23 @@ end
 --     -- Best Area + spawn event farming code.
 -- end
 --
--- QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
---     -- Hatch Legendary eggs; separate from the generic Eggs group.
--- end
---
--- QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
---     -- Generic egg-hatching code.
--- end
+QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
+    RunQuestEggHatch(
+        "Veilroot Egg",
+        Vector3.new(-14887.31, 16.34, 2209.57),
+        questTitle,
+        isEnabled
+    )
+end
+
+QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
+    RunQuestEggHatch(
+        "Hollow Egg",
+        Vector3.new(-15044.67, 16.34, 2147.03),
+        questTitle,
+        isEnabled
+    )
+end
 --
 -- QuestScriptBoxes.InventoryItems = function(questTitle, rank, isEnabled)
 --     -- Inventory-item usage code.
