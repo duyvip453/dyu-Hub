@@ -387,9 +387,10 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, 
     local hatchCountInitOk, hatchCountInitResult = pcall(function()
         return ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
     end)
-    if hatchCountInitOk then
-            else
-            end
+    -- Kết quả khởi tạo hatch-count chưa được dùng; giữ lời gọi để khởi tạo trạng thái.
+    -- if hatchCountInitOk then
+    --     -- Chưa có xử lý kết quả được xác minh.
+    -- end
     if not isEnabled() then return end
     ClickBuyMaxButton()
     task.wait(0.5)
@@ -543,7 +544,9 @@ local function DispatchQuest(rank, questTitle, questGroup)
         end)
 
         if not ok then
-                    end
+            -- Lỗi box được cô lập để không làm sập bộ quét nhiệm vụ.
+            -- Chưa thêm log theo yêu cầu không dùng warn/print.
+        end
 
         if state.Generation == generation then
             state.Running = false
@@ -655,58 +658,33 @@ end)
 -- [START] Box Collect: hiện chỉ nhận diện/log nhiệm vụ
 --box collect
 -- Add the specific collect behavior here when ready; do not teleport to BestArea by default.
-QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
-    if not isEnabled() then
-        return
-    end
-
-    end
+-- Chưa triển khai hành vi Collect; để vô hiệu hóa thay vì chạy box rỗng.
+-- QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
+--     if not isEnabled() then return end
+-- end
 -- [END] Box Collect
 
 -- [START] Box CollectPotions: random ID potion và gọi máy nâng cấp cho tới khi quest kết thúc
-QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
-    if not isEnabled() then return end
-
-    local entries = {}
-    for _, entry in ipairs(PotionUpgradeIDs.Entries or {}) do
-        if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
-            table.insert(entries, entry)
-        end
-    end
-
-    if #entries == 0 then
-                return
-    end
-
-    local remoteName = PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate"
-    local network = ReplicatedStorage:FindFirstChild("Network")
-    local remote = network and network:FindFirstChild(remoteName)
-    if not remote then
-                return
-    end
-
-        while isEnabled() do
-        local entry = entries[math.random(1, #entries)]
-        if not isEnabled() then break end
-
-        local ok, result = pcall(function()
-            return remote:InvokeServer(entry.Id, 1)
-        end)
-
-        if not ok then
-                        task.wait(0.5)
-        else
-                        task.wait(0.2)
-        end
-    end
-
-    end
+-- Tạm vô hiệu hóa CollectPotions: chọn ID ngẫu nhiên giữa mọi tier có thể gửi sai bước nâng cấp.
+-- Chỉ bật lại khi xác minh được tier hiện tại và quy tắc remote của game.
+-- QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
+--     if not isEnabled() then return end
+--     local entries = PotionUpgradeIDs.Entries or {}
+--     local network = ReplicatedStorage:FindFirstChild("Network")
+--     local remote = network and network:FindFirstChild(PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate")
+--     if not remote then return end
+--     while isEnabled() do
+--         -- Không gọi ID ngẫu nhiên: cần xác minh potion/tier trước khi thực thi.
+--         return
+--     end
+-- end
 -- [END] Box CollectPotions
 
 -- [START] Box CollectEnchants: khung trống, chưa triển khai script
-QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
-    -- Chưa triển khai theo yêu cầu.
-end
+-- Chưa triển khai CollectEnchants; để comment cho đến khi có ID đã xác minh.
+-- QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
+--     -- Chưa có logic thực thi an toàn.
+-- end
 -- [END] Box CollectEnchants
 
 -- [START] Box BestArea: teleport tới khu vực farm
@@ -731,9 +709,10 @@ QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
         root.CFrame = CFrame.new(target)
     end)
 
-    if ok then
-            else
-            end
+    -- Teleport đã được thử; chưa cần nhánh xử lý rỗng.
+    -- if ok then
+    --     -- Chưa có xử lý bổ sung.
+    -- end
 end
 -- [END] Box BestArea
 
@@ -890,14 +869,16 @@ end
 -- [END] Box MakePet
 
 -- [START] Box UpdatePotion: khung trống chờ bổ sung logic
-QuestScriptBoxes.UpdatePotion = function(questTitle, rank, isEnabled)
-    -- Chưa triển khai theo yêu cầu; giữ box trống để bổ sung sau.
-end
+-- Chưa triển khai UpdatePotion.
+-- QuestScriptBoxes.UpdatePotion = function(questTitle, rank, isEnabled)
+--     -- Bổ sung sau khi xác minh quy trình nâng cấp.
+-- end
 -- [END] Box UpdatePotion
 
 -- [START] Box UpdateEnchant: khung trống chờ bổ sung logic
-QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
-    -- Chưa triển khai theo yêu cầu; giữ box trống để bổ sung sau.
-end
+-- Chưa triển khai UpdateEnchant.
+-- QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
+--     -- Bổ sung sau khi xác minh ID và quy trình nâng cấp.
+-- end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
