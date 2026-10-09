@@ -513,20 +513,9 @@ end
 -- end
 
 
--- Quest egg automation: each quest uses its own egg and standing position.
-local function IsQuestTaskComplete(rank, questTitle)
-    local path = QuestRankPaths[rank]
-    if not path then return true end
-
-    local currentTitle, progressText = GetQuestInfoFromPath(path)
-    if not currentTitle or currentTitle ~= questTitle then
-        return true
-    end
-
-    return IsQuestProgressComplete(progressText)
-end
-
-local function RunQuestEggHatch(eggName, targetPosition, questTitle, rank, isEnabled, waitBeforeHatching)
+-- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
+-- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
+local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     if not isEnabled() then return end
 
     local character = Player.Character or Player.CharacterAdded:Wait()
@@ -543,11 +532,9 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, rank, isEna
         return
     end
 
-    if waitBeforeHatching then
-        task.wait(1)
-    end
-
-    if not isEnabled() or IsQuestTaskComplete(rank, questTitle) then return end
+    -- Both egg quests wait one second after teleporting before the first hatch.
+    task.wait(1)
+    if not isEnabled() then return end
 
     local remote
     local ok, err = pcall(function()
@@ -558,9 +545,10 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, rank, isEna
         return
     end
 
-    while isEnabled() and not IsQuestTaskComplete(rank, questTitle) do
+    -- Do not read progress here. The Auto Farm Quest scanner stops this loop
+    -- by invalidating isEnabled() when it detects full progress or a new quest.
+    while isEnabled() do
         local success, result = pcall(function()
-            -- Mỗi lần gọi mở 1 quả; lặp lại cho tới khi nhiệm vụ hoàn tất.
             return remote:InvokeServer(eggName, 1)
         end)
 
@@ -579,20 +567,16 @@ QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
         "Veilroot Egg",
         Vector3.new(-14887.31, 16.34, 2209.57),
         questTitle,
-        rank,
-        isEnabled,
-        false
+        isEnabled
     )
 end
 
--- Generic Hatch/Eggs quest: Hollow Egg; teleport, wait 1 second, then hatch.
+-- Generic Hatch/Eggs quest: Hollow Egg, at its own position.
 QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
     RunQuestEggHatch(
         "Hollow Egg",
         Vector3.new(-15044.67, 16.34, 2147.03),
         questTitle,
-        rank,
-        isEnabled,
-        true
+        isEnabled
     )
 end
