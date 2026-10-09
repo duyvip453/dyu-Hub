@@ -2,6 +2,50 @@
 local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- [START] Tải registry ID Potion/Enchant từ file dữ liệu riêng trên GitHub
+-- Hai file phải trả về một Lua table bằng câu lệnh return {...}.
+-- Các box về sau có thể dùng PotionUpgradeIDs.Entries và EnchantUpgradeIDs.Entries.
+local PotionUpgradeIDs = { Version = 1, MachineRemote = "UpgradePotionsMachine_Activate", Entries = {} }
+local EnchantUpgradeIDs = { Version = 1, MachineRemote = "UpgradeEnchantsMachine_Activate", Entries = {} }
+
+local function LoadUpgradeIDRegistry(url, registryName)
+    local ok, result = pcall(function()
+        local source = game:HttpGet(url)
+        assert(type(source) == "string" and source ~= "", "file dữ liệu rỗng")
+        local compile = loadstring(source)
+        assert(type(compile) == "function", "không biên dịch được file dữ liệu")
+        local data = compile()
+        assert(type(data) == "table", "file phải return một table Lua")
+        assert(type(data.Entries) == "table", "thiếu bảng Entries")
+        return data
+    end)
+
+    if not ok then
+        warn("[DYU HUB] Không tải được registry " .. registryName .. ": " .. tostring(result))
+        return nil
+    end
+
+    print("[DYU HUB] Đã tải registry " .. registryName .. " (" .. tostring(#result.Entries) .. " entries)")
+    return result
+end
+
+do
+    local data = LoadUpgradeIDRegistry(
+        "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/upd-potion",
+        "Potion"
+    )
+    if data then PotionUpgradeIDs = data end
+end
+
+do
+    local data = LoadUpgradeIDRegistry(
+        "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/upd-enchant",
+        "Enchant"
+    )
+    if data then EnchantUpgradeIDs = data end
+end
+-- [END] Tải registry ID Potion/Enchant từ file dữ liệu riêng trên GitHub
 local ConfigFileName = "DYUHUB_Config.json"
 
 local Settings = {
