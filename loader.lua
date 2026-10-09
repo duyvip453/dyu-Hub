@@ -512,95 +512,87 @@ end
 --     -- Make-pet code; keep the original questTitle numbers.
 -- end
 
--- TEMP TEST: Auto Hatch Veilroot Egg (remove this block after testing).
-local AutoHatchVeilrootEnabled = false
-local AutoHatchVeilrootRunning = false
 
-Tab1:CreateSection("TEST - Auto Hatch")
+-- Quest egg automation: each quest uses its own egg and standing position.
+local function IsQuestTaskComplete(rank, questTitle)
+    local path = QuestRankPaths[rank]
+    if not path then return true end
 
-Tab1:CreateToggle({
-    Name = "TEST Auto Hatch Veilroot Egg x32",
-    CurrentValue = false,
-    Callback = function(Value)
-        AutoHatchVeilrootEnabled = Value
-
-        if not Value or AutoHatchVeilrootRunning then
-            return
-        end
-
-        AutoHatchVeilrootRunning = true
-        task.spawn(function()
-            local remote
-            local ok, err = pcall(function()
-                remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
-            end)
-
-            if not ok then
-                warn("[DYU HUB] Auto Hatch: không tìm thấy remote: " .. tostring(err))
-                AutoHatchVeilrootRunning = false
-                return
-            end
-
-            while AutoHatchVeilrootEnabled do
-                local success, result = pcall(function()
-                    return remote:InvokeServer("Veilroot Egg", 32)
-                end)
-
-                if not success then
-                    warn("[DYU HUB] Auto Hatch lỗi: " .. tostring(result))
-                    task.wait(1)
-                else
-                    -- Nghỉ giữa các lần gọi để tránh spam remote quá dày.
-                    task.wait(0.5)
-                end
-            end
-
-            AutoHatchVeilrootRunning = false
-        end)
+    local currentTitle, progressText = GetQuestInfoFromPath(path)
+    if not currentTitle or currentTitle ~= questTitle then
+        return true
     end
-})
--- TEMP TEST: Auto Hatch Hollow Egg (remove this block after testing).
-local AutoHatchHollowEnabled = false
-local AutoHatchHollowRunning = false
 
-Tab1:CreateToggle({
-    Name = "TEST Auto Hatch Hollow Egg x32",
-    CurrentValue = false,
-    Callback = function(Value)
-        AutoHatchHollowEnabled = Value
+    return IsQuestProgressComplete(progressText)
+end
 
-        if not Value or AutoHatchHollowRunning then
-            return
-        end
+local function RunQuestEggHatch(eggName, targetPosition, questTitle, rank, isEnabled, waitBeforeHatching)
+    if not isEnabled() then return end
 
-        AutoHatchHollowRunning = true
-        task.spawn(function()
-            local remote
-            local ok, err = pcall(function()
-                remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
-            end)
+    local character = Player.Character or Player.CharacterAdded:Wait()
+    if not isEnabled() then return end
 
-            if not ok then
-                warn("[DYU HUB] Hollow Auto Hatch: không tìm thấy remote: " .. tostring(err))
-                AutoHatchHollowRunning = false
-                return
-            end
+    local root = character:WaitForChild("HumanoidRootPart")
+    if not isEnabled() then return end
 
-            while AutoHatchHollowEnabled do
-                local success, result = pcall(function()
-                    return remote:InvokeServer("Hollow Egg", 32)
-                end)
-
-                if not success then
-                    warn("[DYU HUB] Hollow Auto Hatch lỗi: " .. tostring(result))
-                    task.wait(1)
-                else
-                    task.wait(0.5)
-                end
-            end
-
-            AutoHatchHollowRunning = false
-        end)
+    local teleported, teleportError = pcall(function()
+        root.CFrame = CFrame.new(targetPosition)
+    end)
+    if not teleported then
+        warn("[DYU HUB] Không thể teleport cho nhiệm vụ " .. tostring(questTitle) .. ": " .. tostring(teleportError))
+        return
     end
-})
 
+    if waitBeforeHatching then
+        task.wait(1)
+    end
+
+    if not isEnabled() or IsQuestTaskComplete(rank, questTitle) then return end
+
+    local remote
+    local ok, err = pcall(function()
+        remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
+    end)
+    if not ok then
+        warn("[DYU HUB] Không tìm thấy remote mở trứng: " .. tostring(err))
+        return
+    end
+
+    while isEnabled() and not IsQuestTaskComplete(rank, questTitle) do
+        local success, result = pcall(function()
+            -- Mỗi lần gọi mở 1 quả; lặp lại cho tới khi nhiệm vụ hoàn tất.
+            return remote:InvokeServer(eggName, 1)
+        end)
+
+        if not success then
+            warn("[DYU HUB] Auto hatch " .. eggName .. " lỗi: " .. tostring(result))
+            task.wait(1)
+        else
+            task.wait(0.25)
+        end
+    end
+end
+
+-- Legendary hatch quest: Veilroot Egg, at the Legendary quest position.
+QuestScriptBoxes.LegendaryEggs = function(questTitle, rank, isEnabled)
+    RunQuestEggHatch(
+        "Veilroot Egg",
+        Vector3.new(-14887.31, 16.34, 2209.57),
+        questTitle,
+        rank,
+        isEnabled,
+        false
+    )
+end
+
+-- Generic Hatch/Eggs quest: Hollow Egg; teleport, wait 1 second, then hatch.
+QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
+    RunQuestEggHatch(
+        "Hollow Egg",
+        Vector3.new(-15044.67, 16.34, 2147.03),
+        questTitle,
+        rank,
+        isEnabled,
+        true
+    )
+end
