@@ -1,18 +1,247 @@
 -- DYU HUB - Enchant upgrade ID registry
--- File này chỉ chứa dữ liệu; loader.lua tải file và đọc bảng EnchantUpgradeIDs.
--- Mỗi mục đại diện cho một ID đã xác minh. Bổ sung các ID còn thiếu khi có dữ liệu thực tế.
+-- DisplayName/Enchant phải khớp tên hiển thị trong game.
+-- Id đang để trống vì chưa có ID xác minh; không tự điền ID giả.
+-- Sách thường nâng từ Tier I lên V; Magnet chỉ nâng từ Tier I lên III.
 return {
     Version = 1,
     MachineRemote = "UpgradeEnchantsMachine_Activate",
-    -- ID mẫu người dùng đã cung cấp; cần xác minh loại enchant/tier tương ứng trong game.
     Entries = {
         {
-            Key = "UNVERIFIED_SAMPLE",
-            Id = "3a0c98fe4d3f4b7b8ed262c03486d65b",
-            Amount = 1,
-            Enchant = nil,
-            FromTier = nil,
-            ToTier = nil,
+            Enchant = "Strong Pets",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Strong Pets",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Strong Pets",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Strong Pets",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Criticals",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Criticals",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Criticals",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Criticals",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Walkspeed",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Walkspeed",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Walkspeed",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Walkspeed",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Tap power",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Tap power",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Tap power",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Tap power",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Diamonds",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Diamonds",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Diamonds",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Diamonds",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Lucky Eggs",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Lucky Eggs",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Lucky Eggs",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Lucky Eggs",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Magnet",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Magnet",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Treasure Hunter",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Treasure Hunter",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Treasure Hunter",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Treasure Hunter",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Coins",
+            FromTier = 1,
+            ToTier = 2,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Coins",
+            FromTier = 2,
+            ToTier = 3,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Coins",
+            FromTier = 3,
+            ToTier = 4,
+            Id = "", -- Chưa có ID xác minh
+            Verified = false
+        },
+        {
+            Enchant = "Coins",
+            FromTier = 4,
+            ToTier = 5,
+            Id = "", -- Chưa có ID xác minh
             Verified = false
         }
     }
