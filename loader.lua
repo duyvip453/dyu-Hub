@@ -137,32 +137,31 @@ end
 })
 --endeggupd
 local AutoUpdatePet = false
+
 Tab1:CreateToggle({
     Name = "Auto Update pet slot",
     CurrentValue = false,
     Callback = function(Value)
-AutoUpdatePet = Value
+        AutoUpdatePet = Value
 
-    if Value then
-        task.spawn(function()
-            local remote = game:GetService("ReplicatedStorage")
-                :WaitForChild("Network")
-                :WaitForChild("EquipSlotsMachine_RequestPurchase")
+        if Value then
+            task.spawn(function()
+                local remote = game:GetService("ReplicatedStorage")
+                    :WaitForChild("Network")
+                    :WaitForChild("EquipSlotsMachine_RequestPurchase")
 
-            while AutoUpdatePet do
-                for id = 1, 80 do
-                    if not AutoUpdatePet then
-                        break
+                while AutoUpdatePet do
+                    for id = 1, 60 do
+                        if not AutoUpdatePet then
+                            break
+                        end
+                        pcall(function()
+                            remote:InvokeServer(id)
+                        end)
+                        task.wait(0.5)
                     end
-                    pcall(function()
-                        remote:InvokeServer(id)
-                    end)
-                    task.wait(0.5)
                 end
-            end
-        end)
-    end
-end
-})
+            end)
+        end
 task.wait(0.5)
 isLoaded = true
