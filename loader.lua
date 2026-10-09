@@ -28,6 +28,7 @@ local function LoadConfig()
         SaveConfig()
     end
 end
+
 LoadConfig()
 local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
@@ -109,7 +110,7 @@ end)
 local AutoUpdateEgg = false
 
 Tab1:CreateToggle({
-    Name = "Auto Update Egg",
+    Name = "Auto Update Egg slot",
     CurrentValue = false,
     Callback = function(Value)
 AutoUpdateEgg = Value
@@ -130,7 +131,35 @@ AutoUpdateEgg = Value
         end)
     end
 end
+})
+--endeggupd
+local AutoUpdatePet = false
+Tab1:CreateToggle({
+    Name = "Auto Update pet slot",
+    CurrentValue = false,
+    Callback = function(Value)
+AutoUpdatePet = Value
 
+    if Value then
+        task.spawn(function()
+            local remote = game:GetService("ReplicatedStorage")
+                :WaitForChild("Network")
+                :WaitForChild("EquipSlotsMachine_RequestPurchase")
+
+            while AutoUpdatePet do
+                for id = 1, 80 do
+                    if not AutoUpdatePet then
+                        break
+                    end
+                    pcall(function()
+                        remote:InvokeServer(id)
+                    end)
+                    task.wait(0.5)
+                end
+            end
+        end)
+    end
+end
 })
 task.wait(0.5)
 isLoaded = true
