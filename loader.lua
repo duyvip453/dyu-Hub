@@ -106,28 +106,31 @@ task.spawn(function()
     end
 end)
 --endrank
+local AutoUpdateEgg = false
 
-local UpgradeRemote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("EggHatchSlotsMachine_RequestPurchase")
-local AUTO_UPGRADE_ID = 20
-local AUTO_UPGRADE_INTERVAL = 2
-local autoUpgradeRunning = false
-Tab1:CreateSection("Nâng cấp")
 Tab1:CreateToggle({
-    Name = "Auto nâng trứng",
-    CurrentValue = Settings.AutoUpgradeEggs,
-    Flag = "AutoUpgradeEggsToggle",
+    Name = "Auto Update Egg",
+    CurrentValue = false,
     Callback = function(Value)
-        Settings.AutoUpgradeEggs = Value
-        SaveConfig()
-        autoUpgradeRunning = Value
-        if not Value then return end
+AutoUpdateEgg = Value
+
+    if Value then
         task.spawn(function()
-    while autoUpgradeRunning do
-        local ok, result = pcall(function()
-            return UpgradeRemote:InvokeServer(20)
+            local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+            local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+            local id = 22
+
+            while AutoUpdateEgg do
+                pcall(function()
+                    remote:InvokeServer(id)
+                end)
+                id += 1
+                task.wait(1)
+            end
         end)
-        task.wait(2)
     end
-end)
+end
+
+})
 task.wait(0.5)
 isLoaded = true
