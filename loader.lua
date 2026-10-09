@@ -235,14 +235,15 @@ local QuestRankEnabled = {
 }
 
 local QuestRankPaths = {
-    Easy = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Easy", "Title"},
-    Medium = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Medium", "Title"},
-    Hard = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Hard", "Title"},
-    Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme", "Title"}
+    Easy = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Easy"},
+    Medium = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Medium"},
+    Hard = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Hard"},
+    Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme"}
 }
 
--- Add each task's actual farming code in its matching slot at the bottom.
-local QuestScriptRouter = {
+-- Script boxes: put each group's farming function in its matching box.
+-- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
+local QuestScriptBoxes = {
     BestArea = nil,
     BestAreaEvent = nil,
     Eggs = nil,
@@ -250,22 +251,32 @@ local QuestScriptRouter = {
     MakePet = nil
 }
 
-local LastDispatchedQuest = {}
+local QuestRankState = {}
+for rank in pairs(QuestRankPaths) do
+    QuestRankState[rank] = {
+        ActiveQuest = nil,
+        ActiveGroup = nil,
+        CompletedQuest = nil,
+        Running = false,
+        Generation = 0,
+        CompleteWaitUntil = 0
+    }
+end
 
-local function GetQuestTitleFromPath(path)
+local function GetQuestInfoFromPath(path)
     local current = Player:FindFirstChild("PlayerGui")
-    if not current then return nil end
+    if not current then return nil, nil end
 
     for _, name in ipairs(path) do
         current = current:FindFirstChild(name)
-        if not current then return nil end
+        if not current then return nil, nil end
     end
 
-    if current:IsA("TextLabel") or current:IsA("TextButton") or current:IsA("TextBox") then
-        return current.Text
-    end
+    local title = current:FindFirstChild("Title")
+    local progress = current:FindFirstChild("Progress")
+    if not title or not progress then return nil, nil end
 
-    return nil
+    return title.Text, progress.Text
 end
 
 local function NormalizeQuestText(value, keepNumbers)
@@ -301,25 +312,66 @@ local function IdentifyQuestGroup(questTitle)
     return nil, originalText
 end
 
-local function HandleRecognizedQuest(questTitle, questGroup, rank)
-    local scriptHandler = QuestScriptRouter[questGroup]
-    if type(scriptHandler) ~= "function" then return end
+local function ParseQuestProgress(progressText)
+    local text = tostring(progressText or ""):gsub(",", "")
+    local current, target = text:match("(%d+)%s*/%s*(%d+)")
+    if not current or not target then
+        current, target = text:match("(%d+)%s+of%s+(%d+)")
+    end
+    if not current or not target then return nil, nil end
+    return tonumber(current), tonumber(target)
+end
 
-    local questKey = rank .. ":" .. questGroup
-    if LastDispatchedQuest[questKey] == questTitle then return end
+local function IsQuestProgressComplete(progressText)
+    local current, target = ParseQuestProgress(progressText)
+    return current ~= nil and target ~= nil and target > 0 and current >= target
+end
 
-    LastDispatchedQuest[questKey] = questTitle
+local function IsQuestRankEnabled(rank)
+    return QuestRankEnabled[rank] == true
+end
+
+local function DispatchQuest(rank, questTitle, questGroup)
+    local state = QuestRankState[rank]
+    local scriptBox = QuestScriptBoxes[questGroup]
+    if not state or type(scriptBox) ~= "function" then return end
+    if state.Running or state.ActiveQuest == questTitle then return end
+
+    state.Generation = state.Generation + 1
+    local generation = state.Generation
+    state.ActiveQuest = questTitle
+    state.ActiveGroup = questGroup
+    state.Running = true
+
     task.spawn(function()
-        pcall(scriptHandler, questTitle, rank)
+        local ok, err = pcall(scriptBox, questTitle, rank, function()
+            return IsQuestRankEnabled(rank) and state.Generation == generation
+        end)
+
+        if not ok then
+            warn("[DYU HUB] Quest script box '" .. questGroup .. "' lỗi: " .. tostring(err))
+        end
+
+        if state.Generation == generation then
+            state.Running = false
+        end
     end)
 end
 
 local function SetQuestRankEnabled(rank, value)
     QuestRankEnabled[rank] = value
     Settings["AutoQuest" .. rank] = value
-    for _, group in ipairs({"BestArea", "BestAreaEvent", "Eggs", "InventoryItems", "MakePet"}) do
-        LastDispatchedQuest[rank .. ":" .. group] = nil
+
+    local state = QuestRankState[rank]
+    if state then
+        state.Generation = state.Generation + 1
+        state.Running = false
+        state.ActiveQuest = nil
+        state.ActiveGroup = nil
+        state.CompletedQuest = nil
+        state.CompleteWaitUntil = 0
     end
+
     SaveConfig()
 end
 
@@ -358,12 +410,38 @@ Tab1:CreateToggle({
 task.spawn(function()
     while task.wait(0.5) do
         for rank, path in pairs(QuestRankPaths) do
-            if QuestRankEnabled[rank] then
-                local title = GetQuestTitleFromPath(path)
-                if title and title ~= "" then
-                    local group = IdentifyQuestGroup(title)
-                    if group then
-                        HandleRecognizedQuest(title, group, rank)
+            local state = QuestRankState[rank]
+            if state and IsQuestRankEnabled(rank) then
+                local ok, title, progress = pcall(GetQuestInfoFromPath, path)
+                if ok and title and title ~= "" and progress then
+                    local complete = IsQuestProgressComplete(progress)
+                    local now = os.clock()
+
+                    if state.ActiveQuest and complete then
+                        -- Loader independently confirms completion, then allows the UI to update.
+                        state.CompletedQuest = state.ActiveQuest
+                        state.ActiveQuest = nil
+                        state.ActiveGroup = nil
+                        state.Running = false
+                        state.Generation = state.Generation + 1
+                        state.CompleteWaitUntil = now + 1.5
+                    elseif state.CompletedQuest and title ~= state.CompletedQuest then
+                        state.CompletedQuest = nil
+                    elseif state.CompletedQuest == title and not complete then
+                        -- Same quest title with reset progress means a fresh task instance.
+                        state.CompletedQuest = nil
+                    end
+
+                    if now >= state.CompleteWaitUntil and not state.ActiveQuest and not state.Running then
+                        if state.CompletedQuest ~= title and not complete then
+                            local group = IdentifyQuestGroup(title)
+                            if group then
+                                DispatchQuest(rank, title, group)
+                            end
+                        elseif state.CompletedQuest ~= title and complete then
+                            -- The quest UI may already show a completed task while transitioning.
+                            state.CompleteWaitUntil = now + 1.5
+                        end
                     end
                 end
             end
@@ -371,27 +449,26 @@ task.spawn(function()
     end
 end)
 
--- SCRIPT SLOT: BestArea
--- QuestScriptRouter.BestArea = function(questTitle, rank)
---     -- Put the Best Area script here.
+-- SCRIPT BOXES (keep these assignments at the bottom; fill in each function body).
+-- The loader calls a box by name: QuestScriptBoxes.BestArea(...), QuestScriptBoxes.Eggs(...), etc.
+-- The third argument is isEnabled(); check it in long-running loops and return when false.
+-- Each box should read its own progress and return when current progress reaches the target.
+-- QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
+--     -- Best Area farming code.
 -- end
-
--- SCRIPT SLOT: BestAreaEvent
--- QuestScriptRouter.BestAreaEvent = function(questTitle, rank)
---     -- Put the Best Area + spawn event script here.
+--
+-- QuestScriptBoxes.BestAreaEvent = function(questTitle, rank, isEnabled)
+--     -- Best Area + spawn event farming code.
 -- end
-
--- SCRIPT SLOT: Eggs
--- QuestScriptRouter.Eggs = function(questTitle, rank)
---     -- Put the egg-hatching script here.
+--
+-- QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
+--     -- Egg-hatching code.
 -- end
-
--- SCRIPT SLOT: InventoryItems
--- QuestScriptRouter.InventoryItems = function(questTitle, rank)
---     -- Put the inventory-item script here.
+--
+-- QuestScriptBoxes.InventoryItems = function(questTitle, rank, isEnabled)
+--     -- Inventory-item usage code.
 -- end
-
--- SCRIPT SLOT: MakePet
--- QuestScriptRouter.MakePet = function(questTitle, rank)
---     -- Put the make-pet script here; keep the original questTitle numbers.
+--
+-- QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
+--     -- Make-pet code; keep the original questTitle numbers.
 -- end
