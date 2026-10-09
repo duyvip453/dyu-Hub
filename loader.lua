@@ -480,10 +480,11 @@ local QuestMatchRules = {
     {Group = "UpdateEnchant", Keywords = {"upgrade", "enchants"}, MatchAll = true},
     -- MakePet is routed to its group; the handler distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
-    -- PRIORITY ROUTING: LegendaryEggs must be listed before generic Eggs.
-    -- Both keywords are required; generic Eggs below handles other hatch quests.
+    -- ROUTING GUARD: LegendaryEggs and Eggs are distinct Groups despite sharing "hatch".
+    -- LegendaryEggs requires BOTH "hatch" and "legend"; keep it before the generic Eggs rule.
     {Group = "LegendaryEggs", Keywords = {"hatch", "legend"}, MatchAll = true},
-    {Group = "Eggs", Keywords = {"hatch"}},
+    -- Eggs accepts "hatch" only when the title does NOT contain "legend".
+    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"legend"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
@@ -514,6 +515,16 @@ local function IdentifyQuestGroup(questTitle)
             matched = true
             for _, keyword in ipairs(rule.Keywords or {}) do
                 if not text:find(keyword, 1, true) then
+                    matched = false
+                    break
+                end
+            end
+        end
+        -- Exclusion guard prevents a shared keyword (e.g. "hatch") from routing
+        -- a LegendaryEggs quest into the generic Eggs Group.
+        if matched and rule.ExcludeKeywords then
+            for _, keyword in ipairs(rule.ExcludeKeywords) do
+                if text:find(keyword, 1, true) then
                     matched = false
                     break
                 end
