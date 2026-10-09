@@ -245,6 +245,38 @@ local QuestRankPaths = {
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
 -- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
+-- Current BuyMax hatch amount, refreshed continuously from the game's UI.
+-- Auto Hatch reads this shared value so the requested amount can change during farming.
+local CurrentMaxEggHatchAmount = 1
+
+local function RefreshMaxEggHatchAmount()
+    local playerGui = Player:FindFirstChild("PlayerGui")
+    local misc = playerGui and playerGui:FindFirstChild("_MISC")
+    local buyMultiple = misc and misc:FindFirstChild("BuyMultiple")
+    local frame = buyMultiple and buyMultiple:FindFirstChild("Frame")
+    local contents = frame and frame:FindFirstChild("Contents")
+    local buyMax = contents and contents:FindFirstChild("BuyMax")
+    local textLabel = buyMax and buyMax:FindFirstChild("TextLabel")
+
+    if not textLabel or not textLabel:IsA("TextLabel") then
+        return CurrentMaxEggHatchAmount
+    end
+
+    local amountText = textLabel.Text
+    local amount = tonumber(string.match(amountText, "%d+"))
+    if amount and amount >= 1 then
+        CurrentMaxEggHatchAmount = math.floor(amount)
+    end
+
+    return CurrentMaxEggHatchAmount
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        RefreshMaxEggHatchAmount()
+    end
+end)
+
 local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     if not isEnabled() then return end
 
@@ -279,7 +311,7 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     -- by invalidating isEnabled() when it detects full progress or a new quest.
     while isEnabled() do
         local success, result = pcall(function()
-            return remote:InvokeServer(eggName, 1)
+            return remote:InvokeServer(eggName, RefreshMaxEggHatchAmount())
         end)
 
         if not success then
