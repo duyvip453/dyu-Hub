@@ -128,10 +128,9 @@ end
 local initOk, Window = pcall(function()
     return UIModule:Init({
         ConfigurationSaving = {
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "DYU_HUB",
-        FileName = "Config"
+            Enabled = true,
+            FolderName = "DYU_HUB",
+            FileName = "Config"
         }
     })
 end)
