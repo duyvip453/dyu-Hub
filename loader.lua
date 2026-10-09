@@ -22,12 +22,10 @@ local function LoadUpgradeIDRegistry(url, registryName)
     end)
 
     if not ok then
-        warn("[DYU HUB] Không tải được registry " .. registryName .. ": " .. tostring(result))
-        return nil
+                return nil
     end
 
-    print("[DYU HUB] Đã tải registry " .. registryName .. " (" .. tostring(#result.Entries) .. " entries)")
-    return result
+        return result
 end
 
 do
@@ -62,8 +60,7 @@ local Settings = {
 
 local function SaveConfig()
     if type(writefile) ~= "function" then
-        warn("[DYU HUB] Executor không hỗ trợ writefile; không thể lưu cấu hình.")
-        return false
+                return false
     end
 
     local ok, err = pcall(function()
@@ -71,8 +68,7 @@ local function SaveConfig()
     end)
 
     if not ok then
-        warn("[DYU HUB] Lưu cấu hình thất bại: " .. tostring(err))
-        return false
+                return false
     end
 
     return true
@@ -80,8 +76,7 @@ end
 
 local function LoadConfig()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then
-        warn("[DYU HUB] Executor không hỗ trợ isfile/readfile; dùng cấu hình mặc định.")
-        return
+                return
     end
 
     local existsOk, exists = pcall(function()
@@ -89,8 +84,7 @@ local function LoadConfig()
     end)
 
     if not existsOk then
-        warn("[DYU HUB] Không kiểm tra được file cấu hình.")
-        return
+                return
     end
 
     if not exists then
@@ -103,8 +97,7 @@ local function LoadConfig()
     end)
 
     if not readOk or type(data) ~= "table" then
-        warn("[DYU HUB] Đọc file cấu hình lỗi; dùng cấu hình mặc định.")
-        return
+                return
     end
 
     for key, value in pairs(data) do
@@ -122,8 +115,7 @@ local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
 if not success or not rawCode or rawCode == "" then
-    return warn("[DYU HUB]: Không thể tải background UI từ GitHub!")
-end
+    returnend
 local UIModule = loadstring(rawCode)()
 local Window = UIModule:Init({
     ConfigurationSaving = {
@@ -327,8 +319,7 @@ end
 local function ClickBuyMaxButton()
     local button = GetBuyMaxButton()
     if not button then
-        warn("[DYU HUB] Không tìm thấy nút Buy Max dạng GuiButton trong PlayerGui._MISC.BuyMultiple.")
-        return false
+                return false
     end
 
     local ok, err = pcall(function()
@@ -336,8 +327,7 @@ local function ClickBuyMaxButton()
     end)
 
     if not ok then
-        warn("[DYU HUB] Không thể kích hoạt nút Buy Max: " .. tostring(err))
-        return false
+                return false
     end
 
     return true
@@ -376,8 +366,7 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, 
         root.CFrame = CFrame.new(targetPosition)
     end)
     if not teleported then
-        warn("[DYU HUB] Không thể teleport cho nhiệm vụ " .. tostring(questTitle) .. ": " .. tostring(teleportError))
-        return
+                return
     end
     -- Initialize the game's hatch-count state once before attempting any egg purchase.
     task.wait(1)
@@ -386,41 +375,34 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, 
         return ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
     end)
     if hatchCountInitOk then
-        print("[DYU HUB] Hatch count initialized before auto hatch: " .. tostring(hatchCountInitResult))
-    else
-        warn("[DYU HUB] Hatch count initialization failed: " .. tostring(hatchCountInitResult))
-    end
+            else
+            end
     if not isEnabled() then return end
     ClickBuyMaxButton()
     task.wait(0.5)
     local hatchAmount = RefreshMaxEggHatchAmount()
-    print("[DYU HUB] Auto hatch chuẩn bị: egg=" .. tostring(eggName) .. ", amount=" .. tostring(hatchAmount) .. ", quest=" .. tostring(questTitle))
-    if not isEnabled() then return end
+        if not isEnabled() then return end
     local remote
     local ok, err = pcall(function()
         remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
     end)
     if not ok then
-        warn("[DYU HUB] Không tìm thấy remote mở trứng: " .. tostring(err))
-        return
+                return
     end
     -- Do not read progress here. The Auto Farm Quest scanner stops this loop
     -- by invalidating isEnabled() when it detects full progress or a new quest.
     while isEnabled() do
         if stopWhenReady and stopWhenReady() then
-            print("[DYU HUB] Đã đủ pet theo điều kiện; dừng hatch " .. tostring(eggName))
-            return true
+                        return true
         end
         local amount = RefreshMaxEggHatchAmount()
         local success, result = pcall(function()
             return remote:InvokeServer(eggName, amount)
         end)
         if not success then
-            warn("[DYU HUB] Auto hatch " .. eggName .. " lỗi (amount=" .. tostring(amount) .. "): " .. tostring(result))
-            task.wait(1)
+                        task.wait(1)
         else
-            print("[DYU HUB] Auto hatch response: egg=" .. tostring(eggName) .. ", amount=" .. tostring(amount) .. ", result=" .. tostring(result))
-            task.wait(0.75)
+                        task.wait(0.75)
         end
     end
     return false
@@ -548,8 +530,7 @@ local function DispatchQuest(rank, questTitle, questGroup)
         end)
 
         if not ok then
-            warn("[DYU HUB] Quest script box '" .. questGroup .. "' lỗi: " .. tostring(err))
-        end
+                    end
 
         if state.Generation == generation then
             state.Running = false
@@ -666,8 +647,7 @@ QuestScriptBoxes.Collect = function(questTitle, rank, isEnabled)
         return
     end
 
-    print("[DYU HUB] Collect quest detected; dedicated Collect box selected: " .. tostring(questTitle))
-end
+    end
 -- [END] Box Collect
 
 -- [START] Box CollectPotions: random ID potion và gọi máy nâng cấp cho tới khi quest kết thúc
@@ -682,20 +662,17 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
     end
 
     if #entries == 0 then
-        warn("[DYU HUB] CollectPotions: registry không có ID potion hợp lệ.")
-        return
+                return
     end
 
     local remoteName = PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate"
     local network = ReplicatedStorage:FindFirstChild("Network")
     local remote = network and network:FindFirstChild(remoteName)
     if not remote then
-        warn("[DYU HUB] CollectPotions: không tìm thấy remote " .. tostring(remoteName))
-        return
+                return
     end
 
-    print("[DYU HUB] CollectPotions bắt đầu: random potion ID, amount=1; quest=" .. tostring(questTitle))
-    while isEnabled() do
+        while isEnabled() do
         local entry = entries[math.random(1, #entries)]
         if not isEnabled() then break end
 
@@ -704,18 +681,13 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
         end)
 
         if not ok then
-            warn("[DYU HUB] CollectPotions upgrade lỗi: " .. tostring(result))
-            task.wait(0.5)
+                        task.wait(0.5)
         else
-            print("[DYU HUB] CollectPotions: gửi upgrade potion=" .. tostring(entry.Potion or "Unknown")
-                .. ", tier=" .. tostring(entry.FromTier or "?") .. "->" .. tostring(entry.ToTier or "?")
-                .. ", result=" .. tostring(result))
-            task.wait(0.2)
+                        task.wait(0.2)
         end
     end
 
-    print("[DYU HUB] CollectPotions kết thúc hoặc bị hủy: " .. tostring(questTitle))
-end
+    end
 -- [END] Box CollectPotions
 
 -- [START] Box CollectEnchants: khung trống, chưa triển khai script
@@ -747,10 +719,8 @@ QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
     end)
 
     if ok then
-        print("[DYU HUB] BestArea: đã teleport tới " .. tostring(target) .. " cho nhiệm vụ: " .. tostring(questTitle))
-    else
-        warn("[DYU HUB] BestArea teleport thất bại: " .. tostring(err))
-    end
+            else
+            end
 end
 -- [END] Box BestArea
 
@@ -799,14 +769,12 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
     local isRainbow = title:find("rainbow", 1, true) ~= nil
     local isGolden = title:find("golden", 1, true) ~= nil
     if not isRainbow and not isGolden then
-        warn("[DYU HUB] MakePet: không xác định được nhiệm vụ Golden/Rainbow: " .. tostring(questTitle))
-        return
+                return
     end
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then
-        warn("[DYU HUB] MakePet: không đọc được số pet cần tạo từ tiêu đề: " .. tostring(questTitle))
-        return
+                return
     end
     requested = math.floor(requested)
 
@@ -853,18 +821,15 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
         local network = ReplicatedStorage:FindFirstChild("Network")
         local remote = network and network:FindFirstChild(remoteName)
         if not remote then
-            warn("[DYU HUB] MakePet " .. label .. ": không tìm thấy remote " .. remoteName)
-            return false
+                        return false
         end
         local ok, result = pcall(function()
             return remote:InvokeServer(petId, amount)
         end)
         if not ok then
-            warn("[DYU HUB] MakePet " .. label .. " thất bại: " .. tostring(result))
-            return false
+                        return false
         end
-        print("[DYU HUB] MakePet " .. label .. ": đã gửi yêu cầu amount=" .. tostring(amount) .. "; result=" .. tostring(result))
-        return true
+                return true
     end
 
     -- Dùng lại helper hatch Hollow Egg hiện có; chỉ thêm điều kiện dừng theo Quantity.
@@ -883,20 +848,17 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
 
     local quantity = GetGoldMachineQuantity()
     if not quantity then
-        warn("[DYU HUB] MakePet: không đọc được Quantity trong GoldMachine ItemSlot; dừng để tránh tạo sai.")
-        return
+                return
     end
     if quantity < requiredNormalPets then
-        print("[DYU HUB] MakePet " .. (isRainbow and "Rainbow" or "Golden") .. ": thiếu pet thường (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), bắt đầu hatch Hollow Egg.")
-        if not HatchUntilEnough() then return end
+                if not HatchUntilEnough() then return end
     end
     if not isEnabled() then return end
 
     -- Kiểm tra lại số lượng ngay trước khi gọi máy.
     quantity = GetGoldMachineQuantity()
     if not quantity or quantity < requiredNormalPets then
-        warn("[DYU HUB] MakePet: Quantity không đủ ở lần kiểm tra cuối; chưa gọi máy.")
-        return
+                return
     end
 
     if isGolden then
