@@ -115,7 +115,7 @@ local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
 if not success or not rawCode or rawCode == "" then
-    returnend
+    return
 local UIModule = loadstring(rawCode)()
 local Window = UIModule:Init({
     ConfigurationSaving = {
