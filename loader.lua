@@ -43,45 +43,6 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 
--- Auto Upgrade Eggs (đặt trong Tab 1)
-local UpgradeRemote = ReplicatedStorage
-    :WaitForChild("Network")
-    :WaitForChild("EggHatchSlotsMachine_RequestPurchase")
-
-local AUTO_UPGRADE_ID = 20 -- ID lấy từ log SimpleSpy hiện tại
-local AUTO_UPGRADE_INTERVAL = 2
-local autoUpgradeRunning = false
-
-Tab1:CreateSection("Nâng cấp")
-Tab1:CreateToggle({
-    Name = "Auto nâng trứng",
-    CurrentValue = false,
-    Flag = "AutoUpgradeEggsToggle",
-    Callback = function(Value)
-        autoUpgradeRunning = Value
-
-        if not autoUpgradeRunning then
-            warn("[DYU HUB] Auto nâng trứng: ĐÃ TẮT")
-            return
-        end
-
-        warn("[DYU HUB] Auto nâng trứng: ĐÃ BẬT")
-
-        task.spawn(function()
-            while autoUpgradeRunning do
-                local ok, result = pcall(function()
-                    return UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
-                end)
-
-                if not ok then
-                    warn("[DYU HUB] Nâng trứng thất bại:", result)
-                end
-
-                task.wait(AUTO_UPGRADE_INTERVAL)
-            end
-        end)
-    end
-})
 --rank
 local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
@@ -138,5 +99,46 @@ task.spawn(function()
     end
 end)
 --endrank
+
+-- Auto Upgrade Eggs (đặt trong Tab 1)
+local UpgradeRemote = ReplicatedStorage
+    :WaitForChild("Network")
+    :WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+
+local AUTO_UPGRADE_ID = 20 -- ID lấy từ log SimpleSpy hiện tại
+local AUTO_UPGRADE_INTERVAL = 2
+local autoUpgradeRunning = false
+
+Tab1:CreateSection("Nâng cấp")
+Tab1:CreateToggle({
+    Name = "Auto nâng trứng",
+    CurrentValue = false,
+    Flag = "AutoUpgradeEggsToggle",
+    Callback = function(Value)
+        autoUpgradeRunning = Value
+
+        if not autoUpgradeRunning then
+            warn("[DYU HUB] Auto nâng trứng: ĐÃ TẮT")
+            return
+        end
+
+        warn("[DYU HUB] Auto nâng trứng: ĐÃ BẬT")
+
+        task.spawn(function()
+            while autoUpgradeRunning do
+                local ok, result = pcall(function()
+                    return UpgradeRemote:InvokeServer(AUTO_UPGRADE_ID)
+                end)
+
+                if not ok then
+                    warn("[DYU HUB] Nâng trứng thất bại:", result)
+                end
+
+                task.wait(AUTO_UPGRADE_INTERVAL)
+            end
+        end)
+    end
+})
+--endegg
 task.wait(0.5)
 isLoaded = true
