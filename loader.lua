@@ -322,7 +322,7 @@ task.spawn(function()
         RefreshMaxEggHatchAmount()
     end
 end)
-local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
+local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, stopWhenReady)
     if not isEnabled() then return end
     local character = Player.Character or Player.CharacterAdded:Wait()
     if not isEnabled() then return end
@@ -363,6 +363,10 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
     -- Do not read progress here. The Auto Farm Quest scanner stops this loop
     -- by invalidating isEnabled() when it detects full progress or a new quest.
     while isEnabled() do
+        if stopWhenReady and stopWhenReady() then
+            print("[DYU HUB] Đã đủ pet theo điều kiện; dừng hatch " .. tostring(eggName))
+            return true
+        end
         local amount = RefreshMaxEggHatchAmount()
         local success, result = pcall(function()
             return remote:InvokeServer(eggName, amount)
@@ -375,6 +379,7 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled)
             task.wait(0.75)
         end
     end
+    return false
 end
 local QuestScriptBoxes = {
     BestArea = nil,
@@ -680,25 +685,27 @@ end
 QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
     local title = string.lower(tostring(questTitle or ""))
-    if title:find("rainbow", 1, true) then
-        warn("[DYU HUB] MakePet Rainbow chưa được tự động bổ sung kiểm tra số lượng; hiện chỉ xử lý Golden.")
-        return
-    end
-    if not title:find("golden", 1, true) then
-        warn("[DYU HUB] MakePet: không xác định được nhiệm vụ Golden: " .. tostring(questTitle))
+    local isRainbow = title:find("rainbow", 1, true) ~= nil
+    local isGolden = title:find("golden", 1, true) ~= nil
+    if not isRainbow and not isGolden then
+        warn("[DYU HUB] MakePet: không xác định được nhiệm vụ Golden/Rainbow: " .. tostring(questTitle))
         return
     end
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then
-        warn("[DYU HUB] MakePet Golden: không đọc được số Golden cần tạo từ tiêu đề: " .. tostring(questTitle))
+        warn("[DYU HUB] MakePet: không đọc được số pet cần tạo từ tiêu đề: " .. tostring(questTitle))
         return
     end
     requested = math.floor(requested)
-    local requiredNormalPets = requested * 10
 
-    -- Tìm Quantity trong ItemSlot cùng nhánh Pets của GoldMachine; Icon và Quantity nằm cùng slot.
-    local function GetGoldenInputQuantity()
+    -- [GOLDEN] 10 pet thường tạo được 1 Golden.
+    -- [RAINBOW] 100 pet thường tạo được 1 Rainbow: tạo Golden trước, sau đó ghép Rainbow.
+    local requiredNormalPets = requested * (isRainbow and 100 or 10)
+    local requiredGoldenPets = requested * 10
+
+    -- Đọc Quantity từ ItemSlot trong GoldMachine; dùng chung cho kiểm tra Golden và Rainbow.
+    local function GetGoldMachineQuantity()
         local playerGui = Player:FindFirstChild("PlayerGui")
         local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
         local machine = machines and machines:FindFirstChild("GoldMachine")
@@ -721,93 +728,78 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
                 number = tonumber(number)
                 if number then
                     local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
-                    return math.floor(number * multiplier), quantity
+                    return math.floor(number * multiplier)
                 end
                 local digits = tonumber(raw:match("(%d+)"))
-                if digits then return digits, quantity end
+                if digits then return digits end
             end
         end
         return nil
     end
 
-    local function TeleportToHollowEgg()
-        local character = Player.Character or Player.CharacterAdded:Wait()
+    local function MakeAtMachine(remoteName, petId, amount, label)
         if not isEnabled() then return false end
-        local root = character:WaitForChild("HumanoidRootPart")
-        if not isEnabled() then return false end
-        local ok, err = pcall(function()
-            root.CFrame = CFrame.new(Vector3.new(-15044.67, 16.34, 2147.03))
-        end)
-        if not ok then
-            warn("[DYU HUB] MakePet Golden: teleport tới Hollow Egg thất bại: " .. tostring(err))
+        local network = ReplicatedStorage:FindFirstChild("Network")
+        local remote = network and network:FindFirstChild(remoteName)
+        if not remote then
+            warn("[DYU HUB] MakePet " .. label .. ": không tìm thấy remote " .. remoteName)
             return false
         end
+        local ok, result = pcall(function()
+            return remote:InvokeServer(petId, amount)
+        end)
+        if not ok then
+            warn("[DYU HUB] MakePet " .. label .. " thất bại: " .. tostring(result))
+            return false
+        end
+        print("[DYU HUB] MakePet " .. label .. ": đã gửi yêu cầu amount=" .. tostring(amount) .. "; result=" .. tostring(result))
         return true
     end
 
+    -- Dùng lại helper hatch Hollow Egg hiện có; chỉ thêm điều kiện dừng theo Quantity.
     local function HatchUntilEnough()
-        if not TeleportToHollowEgg() then return false end
-        task.wait(1)
-        if not isEnabled() then return false end
-        pcall(function()
-            ReplicatedStorage:WaitForChild("Network"):WaitForChild("Index: Request Hatch Count"):InvokeServer()
-        end)
-        if not isEnabled() then return false end
-        ClickBuyMaxButton()
-        task.wait(0.5)
-        local remote = ReplicatedStorage:WaitForChild("Network"):WaitForChild("Eggs_RequestPurchase")
-        while isEnabled() do
-            local quantity = GetGoldenInputQuantity()
-            if quantity and quantity >= requiredNormalPets then
-                print("[DYU HUB] MakePet Golden: đủ pet (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), dừng hatch.")
-                return true
+        return RunQuestEggHatch(
+            "Hollow Egg",
+            Vector3.new(-15044.67, 16.34, 2147.03),
+            questTitle,
+            isEnabled,
+            function()
+                local quantity = GetGoldMachineQuantity()
+                return quantity ~= nil and quantity >= requiredNormalPets
             end
-            local hatchAmount = RefreshMaxEggHatchAmount()
-            local ok, err = pcall(function()
-                return remote:InvokeServer("Hollow Egg", hatchAmount)
-            end)
-            if not ok then
-                warn("[DYU HUB] MakePet Golden: mở Hollow Egg thất bại: " .. tostring(err))
-                task.wait(1)
-            else
-                task.wait(0.75)
-            end
-        end
-        return false
+        )
     end
 
-    -- Golden cần đủ 10 pet thường cho mỗi Golden được yêu cầu.
-    local quantity = GetGoldenInputQuantity()
+    local quantity = GetGoldMachineQuantity()
     if not quantity then
-        warn("[DYU HUB] MakePet Golden: không tìm thấy Quantity TextLabel trong GoldMachine ItemSlot; dừng để tránh tạo sai.")
+        warn("[DYU HUB] MakePet: không đọc được Quantity trong GoldMachine ItemSlot; dừng để tránh tạo sai.")
         return
     end
     if quantity < requiredNormalPets then
-        print("[DYU HUB] MakePet Golden: thiếu pet thường (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), bắt đầu hatch Hollow Egg.")
+        print("[DYU HUB] MakePet " .. (isRainbow and "Rainbow" or "Golden") .. ": thiếu pet thường (" .. tostring(quantity) .. "/" .. tostring(requiredNormalPets) .. "), bắt đầu hatch Hollow Egg.")
         if not HatchUntilEnough() then return end
     end
     if not isEnabled() then return end
 
-    -- Kiểm tra lại ngay trước khi gọi máy, phòng khi số lượng thay đổi.
-    quantity = GetGoldenInputQuantity()
+    -- Kiểm tra lại số lượng ngay trước khi gọi máy.
+    quantity = GetGoldMachineQuantity()
     if not quantity or quantity < requiredNormalPets then
-        warn("[DYU HUB] MakePet Golden: số pet không đủ ở lần kiểm tra cuối; chưa gọi máy.")
+        warn("[DYU HUB] MakePet: Quantity không đủ ở lần kiểm tra cuối; chưa gọi máy.")
         return
     end
-    local remote = ReplicatedStorage:FindFirstChild("Network")
-    remote = remote and remote:FindFirstChild("GoldMachine_Activate")
-    if not remote then
-        warn("[DYU HUB] MakePet Golden: không tìm thấy remote GoldMachine_Activate.")
+
+    if isGolden then
+        MakeAtMachine("GoldMachine_Activate", "f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets, "Golden")
         return
     end
-    local ok, result = pcall(function()
-        return remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
-    end)
-    if ok then
-        print("[DYU HUB] MakePet Golden: yêu cầu tạo " .. tostring(requested) .. " Golden, tiêu thụ " .. tostring(requiredNormalPets) .. " pet thường; result=" .. tostring(result))
-    else
-        warn("[DYU HUB] MakePet Golden thất bại: " .. tostring(result))
-    end
+
+    -- [RAINBOW] Đủ 100 pet thường cho mỗi Rainbow: ghép Golden trước (10 pet thường/Golden),
+    -- rồi mới dùng 10 Golden cho mỗi Rainbow. Quantity của GoldMachine được kiểm tra trước bước này.
+    local goldenMade = MakeAtMachine("GoldMachine_Activate", "f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets, "Golden trung gian")
+    if not goldenMade or not isEnabled() then return end
+    task.wait(1)
+    if not isEnabled() then return end
+    MakeAtMachine("RainbowMachine_Activate", "192c592642a445c8963250710c12bf69", requiredGoldenPets, "Rainbow")
 end
 -- [END] Box MakePet
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
