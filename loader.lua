@@ -282,6 +282,10 @@ end
 -- [END] Auto Update Egg slot và Pet slot
 
 -- [START] Auto Farm Quest: cấu hình rank, đọc UI, phân loại và điều phối nhiệm vụ
+-- KIẾN TRÚC HIỆN TẠI: 4 toggle Easy/Medium/Hard/Extreme chỉ là công tắc TEST theo rank.
+-- KIẾN TRÚC ĐÍCH: một toggle Auto Rank duy nhất -> đọc nhiệm vụ mọi rank -> IdentifyQuestGroup
+-- -> bộ sắp xếp ưu tiên chọn Group cần chạy -> DispatchQuest -> QuestScriptBoxes[Group].
+-- Không xóa 4 toggle ở giai đoạn này; mọi handler bên dưới phải giữ độc lập theo Group.
 task.wait(0.5)
 isLoaded = true
 
@@ -298,6 +302,11 @@ local QuestRankPaths = {
     Hard = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Hard"},
     Extreme = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Extreme"}
 }
+-- [GROUP ROUTING CONTRACT]
+-- Mỗi Group có handler riêng trong QuestScriptBoxes; không gắn handler trực tiếp vào 4 toggle rank.
+-- IdentifyQuestGroup chỉ phân loại; bộ ưu tiên tương lai sẽ chọn Group cần chạy trước.
+-- DispatchQuest là điểm trung gian duy nhất để gọi QuestScriptBoxes[group].
+-- Mỗi handler nhận (questTitle, rank, isEnabled) và phải dừng khi bị hủy/quest hoàn tất.
 -- Script boxes: put each group's farming function in its matching box.
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
@@ -469,10 +478,11 @@ local QuestMatchRules = {
     -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
     {Group = "UpdatePotion", Keywords = {"upgrade", "potions"}, MatchAll = true},
     {Group = "UpdateEnchant", Keywords = {"upgrade", "enchants"}, MatchAll = true},
-    -- MakePet is checked first; its box distinguishes Golden from Rainbow.
+    -- MakePet is routed to its group; the handler distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
-    -- LegendaryEggs is handled by the explicit BOTH-keywords check in IdentifyQuestGroup.
-    -- Generic Eggs only matches "hatch" when the title does not mention "legend".
+    -- PRIORITY ROUTING: LegendaryEggs must be listed before generic Eggs.
+    -- Both keywords are required; generic Eggs below handles other hatch quests.
+    {Group = "LegendaryEggs", Keywords = {"hatch", "legend"}, MatchAll = true},
     {Group = "Eggs", Keywords = {"hatch"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
@@ -486,11 +496,8 @@ local function IdentifyQuestGroup(questTitle)
     local originalText = NormalizeQuestText(questTitle, true)
     local normalizedTitle = NormalizeQuestText(questTitle, true)
 
-    -- A Legendary egg quest must contain both "hatch" and "legend".
-    if normalizedTitle:find("hatch", 1, true) and normalizedTitle:find("legend", 1, true) then
-        return "LegendaryEggs", originalText
-    end
-
+    -- Phân loại toàn bộ nhiệm vụ qua QuestMatchRules để sau này bộ ưu tiên
+    -- có thể chọn Group trước khi gọi QuestScriptBoxes[Group].
     for _, rule in ipairs(QuestMatchRules) do
         local text = NormalizeQuestText(questTitle, rule.KeepNumbers == true)
         local matched = false
@@ -584,6 +591,9 @@ local function SetQuestRankEnabled(rank, value)
     SaveConfig()
 end
 
+-- [TEST TOGGLES / TEMPORARY ROUTING]
+-- 4 nút dưới đây chỉ để test từng rank độc lập. Khi chuyển sang Auto Rank,
+-- thay lớp toggle này bằng một toggle duy nhất; không đặt logic nhiệm vụ trong callback nút.
 Tab1:CreateToggle({
     Name = "Auto Farm Quest - Easy",
     CurrentValue = QuestRankEnabled.Easy,
