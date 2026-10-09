@@ -1,19 +1,174 @@
 -- DYU HUB - Potion upgrade ID registry
--- File này chỉ chứa dữ liệu; loader.lua tải file và đọc bảng PotionUpgradeIDs.
--- Mỗi mục đại diện cho một ID đã xác minh. Bổ sung các ID còn thiếu khi có dữ liệu thực tế.
+-- Điền ID vào trường Id tương ứng; giữ nguyên chuỗi trong dấu ngoặc kép.
+-- Mỗi potion có một entry cho từng bước nâng cấp. Speed Potion tối đa Tier III.
+
 return {
     Version = 1,
     MachineRemote = "UpgradePotionsMachine_Activate",
-    -- ID mẫu người dùng đã cung cấp; cần xác minh loại potion/tier tương ứng trong game.
+
+    -- Một registry chung cho tất cả potion.
     Entries = {
         {
-            Key = "UNVERIFIED_SAMPLE",
-            Id = "9b5c5fc3011d45f692a1d00564e01e45",
-            Amount = 5,
-            Potion = nil,
-            FromTier = nil,
-            ToTier = nil,
-            Verified = false
+            Potion = "Treasure Hunter Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Treasure Hunter Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Treasure Hunter Potion",
+            FromTier = 3,
+            ToTier = 4,
+            Id = ""
+        },
+        {
+            Potion = "Treasure Hunter Potion",
+            FromTier = 4,
+            ToTier = 5,
+            Id = ""
+        },
+        {
+            Potion = "Treasure Hunter Potion",
+            FromTier = 5,
+            ToTier = 6,
+            Id = ""
+        },
+        {
+            Potion = "Speed Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Speed Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Lucky Eggs Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Lucky Eggs Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Lucky Eggs Potion",
+            FromTier = 3,
+            ToTier = 4,
+            Id = ""
+        },
+        {
+            Potion = "Lucky Eggs Potion",
+            FromTier = 4,
+            ToTier = 5,
+            Id = ""
+        },
+        {
+            Potion = "Lucky Eggs Potion",
+            FromTier = 5,
+            ToTier = 6,
+            Id = ""
+        },
+        {
+            Potion = "Diamonds Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Diamonds Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Diamonds Potion",
+            FromTier = 3,
+            ToTier = 4,
+            Id = ""
+        },
+        {
+            Potion = "Diamonds Potion",
+            FromTier = 4,
+            ToTier = 5,
+            Id = ""
+        },
+        {
+            Potion = "Diamonds Potion",
+            FromTier = 5,
+            ToTier = 6,
+            Id = ""
+        },
+        {
+            Potion = "Coins Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Coins Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Coins Potion",
+            FromTier = 3,
+            ToTier = 4,
+            Id = ""
+        },
+        {
+            Potion = "Coins Potion",
+            FromTier = 4,
+            ToTier = 5,
+            Id = ""
+        },
+        {
+            Potion = "Coins Potion",
+            FromTier = 5,
+            ToTier = 6,
+            Id = ""
+        },
+        {
+            Potion = "Damage Potion",
+            FromTier = 1,
+            ToTier = 2,
+            Id = ""
+        },
+        {
+            Potion = "Damage Potion",
+            FromTier = 2,
+            ToTier = 3,
+            Id = ""
+        },
+        {
+            Potion = "Damage Potion",
+            FromTier = 3,
+            ToTier = 4,
+            Id = ""
+        },
+        {
+            Potion = "Damage Potion",
+            FromTier = 4,
+            ToTier = 5,
+            Id = ""
+        },
+        {
+            Potion = "Damage Potion",
+            FromTier = 5,
+            ToTier = 6,
+            Id = ""
         }
     }
 }
