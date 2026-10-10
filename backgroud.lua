@@ -20,7 +20,7 @@ function UIModule:Init()
 local Window = Luna:CreateWindow({
 	Name = "DYU HUB", -- This Is Title Of Your Window
 	Subtitle = nil, -- A Gray Subtitle next To the main title.
-	LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
+	LogoID = "86628632168323", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
 	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
 	LoadingTitle = "DYU HUB", -- Header for loading screen
 	LoadingSubtitle = "by duy duy", -- Subtitle for loading screen
