@@ -71,7 +71,7 @@ if not initOk or type(Window) ~= "table" or type(Window.CreateTab) ~= "function"
 end
 local EventTab = Window:CreateTab({
     Name = "Event",
-    Icon = "calendar",
+    Icon = "person",
     ImageSource = "Material",
     ShowTitle = true
 })
