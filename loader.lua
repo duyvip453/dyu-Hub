@@ -894,74 +894,43 @@ end
 -- end
 -- [END] Box InventoryItems
 
--- [START] Box MakeGolden: chỉ xử lý nhiệm vụ có key "golden"
--- Golden sử dụng 10 pet thường cho mỗi Golden.
+-- [START] Box MakeGolden: mở Gold Machine, craft theo số lượng nhiệm vụ rồi đóng máy
 QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
+
     local title = string.lower(tostring(questTitle or ""))
     if not title:find("golden", 1, true) then return end
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then return end
-    requested = math.floor(requested)
-    local requiredNormalPets = requested * 10
 
-    local function GetGoldMachineQuantity()
-        local playerGui = Player:FindFirstChild("PlayerGui")
-        local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
-        local machine = machines and machines:FindFirstChild("GoldMachine")
-        local frame = machine and machine:FindFirstChild("Frame")
-        local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
-        local items = itemsFrame and itemsFrame:FindFirstChild("Items")
-        local pets = items and items:FindFirstChild("Pets")
-        if not pets then return nil end
-        local slots = {}
-        if pets.Name == "ItemSlot" then table.insert(slots, pets) end
-        for _, object in ipairs(pets:GetDescendants()) do
-            if object.Name == "ItemSlot" then table.insert(slots, object) end
-        end
-        for _, slot in ipairs(slots) do
-            local quantity = slot:FindFirstChild("Quantity")
-            if quantity and quantity:IsA("TextLabel") then
-                local raw = quantity.Text:gsub(",", ""):gsub("%s+", "")
-                local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
-                number = tonumber(number)
-                if number then
-                    local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
-                    return math.floor(number * multiplier)
-                end
-                local digits = tonumber(raw:match("(%d+)"))
-                if digits then return digits end
-            end
-        end
-        return nil
-    end
+    -- Mỗi Golden cần 10 pet thường; không quét icon hoặc quantity trên máy.
+    local quantity = math.floor(requested) * 10
+    local RS = game:GetService("ReplicatedStorage")
+    local Library = RS:WaitForChild("Library")
+    local GUI = require(Library.Client.GUI)
+    local TabController = require(Library.Client.TabController)
 
-    local quantity = GetGoldMachineQuantity()
-    if not quantity then return end
-    if quantity < requiredNormalPets then
-        local hatched = RunQuestEggHatch(
-            "Hollow Egg",
-            Vector3.new(-15044.67, 16.34, 2147.03),
-            questTitle,
-            isEnabled,
-            function()
-                local current = GetGoldMachineQuantity()
-                return current ~= nil and current >= requiredNormalPets
-            end
-        )
-        if not hatched then return end
-    end
     if not isEnabled() then return end
-    quantity = GetGoldMachineQuantity()
-    if not quantity or quantity < requiredNormalPets then return end
+    GUI.GoldMachine()
+    TabController.OpenTab("GoldMachine")
+    task.wait(0.25)
 
-    local network = ReplicatedStorage:FindFirstChild("Network")
+    if not isEnabled() then
+        TabController.CloseTab("GoldMachine")
+        return
+    end
+
+    local network = RS:FindFirstChild("Network")
     local remote = network and network:FindFirstChild("GoldMachine_Activate")
-    if not remote or not remote:IsA("RemoteFunction") then return end
-    pcall(function()
-        remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
-    end)
+    if remote and remote:IsA("RemoteFunction") and isEnabled() then
+        pcall(function()
+            remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", quantity)
+        end)
+    end
+
+    task.wait(0.25)
+    TabController.CloseTab("GoldMachine")
 end
 -- [END] Box MakeGolden
 
