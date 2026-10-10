@@ -904,8 +904,8 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then return end
 
-    -- Mỗi Golden cần 10 pet thường; không quét icon hoặc quantity trên máy.
-    local quantity = math.floor(requested) * 10
+    -- Tham số thứ hai của GoldMachine_Activate là số lượt craft Golden, không phải số pet thường.
+    local quantity = math.floor(requested)
     local RS = game:GetService("ReplicatedStorage")
     local Library = RS:WaitForChild("Library")
     local GUI = require(Library.Client.GUI)
