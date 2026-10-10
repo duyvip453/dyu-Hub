@@ -764,10 +764,56 @@ QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
 end
 -- [END] Box BestArea
 
--- [START] Box BestAreaEvent: khung chờ bổ sung logic event
--- QuestScriptBoxes.BestAreaEvent = function(questTitle, rank, isEnabled)
---     -- Best Area + spawn event farming code.
--- end
+-- [START] Box BestAreaEvent: teleport Best Area rồi triệu hồi đúng random event theo title
+QuestScriptBoxes.BestAreaEvent = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local title = string.lower(tostring(questTitle or ""))
+    local remoteName, eventId
+
+    -- Chọn loại event dựa trên Title của nhiệm vụ đang được dispatch.
+    if title:find("comet", 1, true) then
+        remoteName = "Comet_Spawn"
+        eventId = "1cb6f4264dc44d8f94bbfa21cf91a6ea"
+    elseif title:find("coin jar", 1, true) or title:find("coin jars", 1, true) then
+        remoteName = "CoinJar_Spawn"
+        eventId = "1946bd672d3e4329897c343f992f7e43"
+    elseif title:find("lucky block", 1, true) then
+        remoteName = "MiniLuckyBlock_Consume"
+        eventId = "71bb241b66ec486caed990f7a7fd9fce"
+    elseif title:find("piñata", 1, true) or title:find("pinata", 1, true) then
+        remoteName = "MiniPinata_Consume"
+        eventId = "a5ff9b42f8ae410bb1268c4e1416400f"
+    else
+        return
+    end
+
+    local character = Player.Character or Player.CharacterAdded:Wait()
+    if not isEnabled() then return end
+    local root = character:WaitForChild("HumanoidRootPart")
+    if not isEnabled() then return end
+
+    local teleported = pcall(function()
+        root.CFrame = CFrame.new(Vector3.new(-15044.65, 16.34, 2203.12))
+    end)
+    if not teleported then return end
+
+    task.wait(1)
+    if not isEnabled() then return end
+
+    local network = ReplicatedStorage:WaitForChild("Network", 5)
+    if not network or not isEnabled() then return end
+    local remote = network:WaitForChild(remoteName, 5)
+    if not remote or not remote:IsA("RemoteFunction") then return end
+
+    -- Lặp lại đến khi scanner phát hiện nhiệm vụ hoàn tất/đổi nhiệm vụ hoặc toggle bị tắt.
+    while isEnabled() do
+        pcall(function()
+            remote:InvokeServer(eventId)
+        end)
+        task.wait(0.1)
+    end
+end
 -- [END] Box BestAreaEvent
 
 -- [START] Box LegendaryEggs: mở Veilroot Egg tại vị trí chỉ định
