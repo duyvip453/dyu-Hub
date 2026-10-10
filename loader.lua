@@ -999,35 +999,50 @@ end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
 
--- [START] Toggle test cô lập: Update Potion một ID, amount = 1
-Tab1:CreateToggle({
-    Name = "TEST - Update Potion (1 ID)",
-    CurrentValue = false,
-    Callback = function(Value)
-        if not Value then return end
+-- [START] Toggle test spawn event: mỗi toggle gọi đúng một lần
+local TestEventSpawns = {
+    {
+        Name = "TEST - Spawn Comet",
+        Remote = "Comet_Spawn",
+        Id = "1cb6f4264dc44d8f94bbfa21cf91a6ea"
+    },
+    {
+        Name = "TEST - Spawn Coin Jar",
+        Remote = "CoinJar_Spawn",
+        Id = "1946bd672d3e4329897c343f992f7e43"
+    },
+    {
+        Name = "TEST - Spawn Lucky Block",
+        Remote = "MiniLuckyBlock_Consume",
+        Id = "71bb241b66ec486caed990f7a7fd9fce"
+    },
+    {
+        Name = "TEST - Spawn Pinata",
+        Remote = "MiniPinata_Consume",
+        Id = "a5ff9b42f8ae410bb1268c4e1416400f"
+    }
+}
 
-        task.spawn(function()
-            local entries = PotionUpgradeIDs.Entries or {}
-            local validEntries = {}
+for _, event in ipairs(TestEventSpawns) do
+    Tab1:CreateToggle({
+        Name = event.Name,
+        CurrentValue = false,
+        Callback = function(Value)
+            if not Value then return end
 
-            for _, entry in ipairs(entries) do
-                if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
-                    table.insert(validEntries, entry)
-                end
-            end
+            task.spawn(function()
+                local network = ReplicatedStorage:WaitForChild("Network", 5)
+                if not network then return end
 
-            if #validEntries == 0 then return end
+                local remote = network:WaitForChild(event.Remote, 5)
+                if not remote or not remote:IsA("RemoteFunction") then return end
 
-            local selected = validEntries[math.random(1, #validEntries)]
-            local network = ReplicatedStorage:WaitForChild("Network")
-            local remote = network:WaitForChild(PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate")
-            if remote:IsA("RemoteFunction") then
                 pcall(function()
-                    remote:InvokeServer(selected.Id, 1)
+                    remote:InvokeServer(event.Id)
                 end)
-            end
-        end)
-    end
-})
--- [END] Toggle test cô lập: Update Potion một ID, amount = 1
+            end)
+        end
+    })
+end
+-- [END] Toggle test spawn event: mỗi toggle gọi đúng một lần
 
