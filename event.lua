@@ -43,42 +43,72 @@ end
 LoadConfig()
 -- [END] Config riêng của Event
 
--- [START] Khởi tạo tab Event trên cửa sổ do loader.lua truyền vào
-return function(Window)
-    if type(Window) ~= "table" or type(Window.CreateTab) ~= "function" then
-        warn("[DYU HUB / EVENT] Cửa sổ chính không hợp lệ.")
-        return
-    end
-
-    local EventTab = Window:CreateTab({
-        Name = "Event",
-        Icon = "calendar",
-        ImageSource = "Material",
-        ShowTitle = true
-    })
-
-    EventTab:CreateSection("Event")
-    EventTab:CreateLabel({
-        Text = "Event module đã tải. Chức năng và config Event được quản lý riêng tại event.lua.",
-        Style = 1
-    })
-
-    -- [START] TOGGLE: AUTO HW BOSS TAP
-    -- Toggle chỉ lưu trạng thái; không tự gửi RemoteEvent tới server game.
-    EventTab:CreateSection("Hatch War")
-    EventTab:CreateToggle({
-        Name = "Auto HW Boss Tap",
-        CurrentValue = EventSettings.AutoHatchWarBossTap,
-        Callback = function(Value)
-            EventSettings.AutoHatchWarBossTap = Value
-            SaveConfig()
-            if Value then
-                print("[DYU HUB / EVENT] Auto HW Boss Tap: ON")
-            else
-                print("[DYU HUB / EVENT] Auto HW Boss Tap: OFF")
-            end
-        end
-    })
-    -- [END] TOGGLE: AUTO HW BOSS TAP
+-- [START] Tải UI và tạo cửa sổ theo đúng cách loader.lua khởi tạo
+local BACKGROUND_URL = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
+local fetchOk, rawCode = pcall(function()
+    return game:HttpGet(BACKGROUND_URL)
+end)
+if not fetchOk or type(rawCode) ~= "string" or rawCode == "" then
+    warn("[DYU HUB / EVENT] Không tải được backgroud.lua.")
+    return
 end
--- [END] Khởi tạo tab Event trên cửa sổ do loader.lua truyền vào
+
+local compileUI = loadstring(rawCode)
+if type(compileUI) ~= "function" then
+    warn("[DYU HUB / EVENT] Không biên dịch được backgroud.lua.")
+    return
+end
+
+local moduleOk, UIModule = pcall(compileUI)
+if not moduleOk or type(UIModule) ~= "table" or type(UIModule.Init) ~= "function" then
+    warn("[DYU HUB / EVENT] UI module không hợp lệ.")
+    return
+end
+
+local initOk, Window = pcall(function()
+    return UIModule:Init({
+        ConfigurationSaving = {
+            Enabled = true,
+            FolderName = "DYU_HUB",
+            FileName = "EventConfig"
+        }
+    })
+end)
+if not initOk or type(Window) ~= "table" or type(Window.CreateTab) ~= "function" then
+    warn("[DYU HUB / EVENT] Không tạo được cửa sổ chính.")
+    return
+end
+-- [END] Tải UI và tạo cửa sổ theo đúng cách loader.lua khởi tạo
+
+-- [START] Tạo tab Event theo đúng API của loader.lua
+local EventTab = Window:CreateTab({
+    Name = "Event",
+    Icon = "calendar",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+
+EventTab:CreateSection("Event")
+EventTab:CreateLabel({
+    Text = "Event module đã tải. Chức năng và config Event được quản lý riêng tại event.lua.",
+    Style = 1
+})
+
+-- [START] TOGGLE: AUTO HW BOSS TAP
+-- Toggle chỉ lưu trạng thái; không tự gửi RemoteEvent tới server game.
+EventTab:CreateSection("Hatch War")
+EventTab:CreateToggle({
+    Name = "Auto HW Boss Tap",
+    CurrentValue = EventSettings.AutoHatchWarBossTap,
+    Callback = function(Value)
+        EventSettings.AutoHatchWarBossTap = Value
+        SaveConfig()
+        if Value then
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: ON")
+        else
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: OFF")
+        end
+    end
+})
+-- [END] TOGGLE: AUTO HW BOSS TAP
+-- [END] Tạo tab Event theo đúng API của loader.lua
