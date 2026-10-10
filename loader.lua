@@ -755,32 +755,31 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
 end
 -- [END] Box CollectEnchants
 
--- [START] Box BestArea: teleport tới khu vực farm
---boxarea
+-- [START] Box BestArea: chỉ teleport một lần cho mỗi quest/rank
+local BestAreaTeleported = {}
+
 QuestScriptBoxes.BestArea = function(questTitle, rank, isEnabled)
-    if not isEnabled() then
-        return
-    end
+    if not isEnabled() then return end
+
+    -- Ghi nhớ theo rank + tên quest để việc dispatch lại không teleport lần nữa.
+    local questKey = tostring(rank) .. "|" .. tostring(questTitle)
+    if BestAreaTeleported[questKey] then return end
 
     local character = Player.Character or Player.CharacterAdded:Wait()
-    if not isEnabled() then
-        return
-    end
+    if not isEnabled() then return end
 
     local root = character:WaitForChild("HumanoidRootPart")
-    if not isEnabled() then
-        return
-    end
+    if not isEnabled() then return end
 
     local target = Vector3.new(-15044.65, 16.34, 2203.12)
-    local ok, err = pcall(function()
+    local ok = pcall(function()
         root.CFrame = CFrame.new(target)
     end)
 
-    -- Teleport đã được thử; chưa cần nhánh xử lý rỗng.
-    -- if ok then
-    --     -- Chưa có xử lý bổ sung.
-    -- end
+    -- Chỉ đánh dấu đã teleport nếu thao tác thành công.
+    if ok then
+        BestAreaTeleported[questKey] = true
+    end
 end
 -- [END] Box BestArea
 
