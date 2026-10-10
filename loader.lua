@@ -454,7 +454,7 @@ local function NormalizeQuestText(value, keepNumbers)
 end
 local QuestMatchRules = {
     -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
-    {Group = "UpdatePotion", Keywords = {"upgrade", "potions"}, MatchAll = true},
+    {Group = "UpdatePotion", Keywords = {"upgrade", "potion"}, MatchAll = true},
     {Group = "UpdateEnchant", Keywords = {"upgrade", "enchants"}, MatchAll = true},
     -- MakePet is routed to its group; the handler distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
@@ -464,7 +464,7 @@ local QuestMatchRules = {
     -- Eggs accepts "hatch" only when the title does NOT contain "legend".
     {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"Legendary"}},
     {Group = "InventoryItems", Keywords = {"use"}},
-    {Group = "CollectPotions", Keywords = {"collect", "potions"}, MatchAll = true},
+    {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
     -- Các từ khóa trong AnyKeywords là lựa chọn thay thế nhau (OR), không phải bắt buộc xuất hiện cùng lúc.
     {Group = "BestAreaEvent", AnyKeywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
