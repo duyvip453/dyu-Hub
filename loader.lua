@@ -419,7 +419,7 @@ local QuestScriptBoxes = {
     CollectEnchants = nil,
     LegendaryEggs = nil,
     Eggs = nil,
-    InventoryItems = nil,
+    ["Use"] = nil,
     MakeGolden = nil,
     MakeRainbow = nil,
     UpdatePotion = nil,
@@ -468,7 +468,7 @@ local QuestMatchRules = {
     {Group = "LegendaryEggs", Keywords = {"hatch", "Legendary"}, MatchAll = true},
     -- Eggs accepts "hatch" only when the title does NOT contain "legend".
     {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"Legendary"}},
-    {Group = "InventoryItems", Keywords = {"use"}},
+    {Group = "Use", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchant"}, MatchAll = true},
     -- Mỗi event có Group và handler riêng để không dùng chung logic triệu hồi.
@@ -900,11 +900,14 @@ QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
 end
 -- [END] Box Eggs
 
--- [START] Box InventoryItems: khung chờ bổ sung logic dùng vật phẩm
--- QuestScriptBoxes.InventoryItems = function(questTitle, rank, isEnabled)
---     -- Inventory-item usage code.
--- end
--- [END] Box InventoryItems
+-- [START] Box Use: khung chờ bổ sung logic sử dụng vật phẩm
+QuestScriptBoxes["Use"] = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    -- TODO: Thêm logic xử lý nhiệm vụ "Use" tại đây.
+    -- Các vòng lặp dài cần kiểm tra isEnabled() và return khi nhiệm vụ dừng.
+end
+-- [END] Box Use
 
 -- [START] Box MakeGolden: gọi thẳng remote, không cần mở Gold Machine
 QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
