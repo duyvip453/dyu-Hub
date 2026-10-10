@@ -903,9 +903,56 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then return end
+    requested = math.floor(requested)
 
-    -- Tham số thứ hai của GoldMachine_Activate là số lượt craft Golden, không phải số pet thường.
-    local quantity = math.floor(requested)
+    local playerGui = Player:WaitForChild("PlayerGui")
+    local function GetNormalPetQuantity()
+        local machines = playerGui:FindFirstChild("_MACHINES")
+        local machine = machines and machines:FindFirstChild("GoldMachine")
+        local frame = machine and machine:FindFirstChild("Frame")
+        local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
+        local items = itemsFrame and itemsFrame:FindFirstChild("Items")
+        local pets = items and items:FindFirstChild("Pets")
+        local slot = pets and pets:FindFirstChild("ItemSlot")
+        local icon = slot and slot:FindFirstChild("Icon")
+        local quantityLabel = slot and slot:FindFirstChild("Quantity")
+
+        if not icon or not quantityLabel or not quantityLabel:IsA("TextLabel") then
+            return nil
+        end
+        if icon.Image ~= "rbxassetid://76025459852090" then
+            return nil
+        end
+
+        local raw = quantityLabel.Text:gsub(",", ""):gsub("%s+", "")
+        local amount = tonumber(raw:match("(%d+%.?%d*)"))
+        if not amount then return nil end
+        return math.floor(amount)
+    end
+
+    -- Mỗi Golden cần 10 pet thường: chỉ bắt đầu craft khi số pet thường đủ.
+    local requiredNormalPets = requested * 10
+    local currentQuantity = GetNormalPetQuantity()
+
+    if not currentQuantity or currentQuantity < requiredNormalPets then
+        local hatched = RunQuestEggHatch(
+            "Hollow Egg",
+            Vector3.new(-15043.85, 17.57, 2120.55),
+            questTitle,
+            isEnabled,
+            function()
+                local current = GetNormalPetQuantity()
+                return current ~= nil and current >= requiredNormalPets
+            end
+        )
+        if not hatched or not isEnabled() then return end
+    end
+
+    if not isEnabled() then return end
+    -- Quét lại trước khi mở máy để tránh craft khi số pet chưa đủ.
+    currentQuantity = GetNormalPetQuantity()
+    if not currentQuantity or currentQuantity < requiredNormalPets then return end
+
     local RS = game:GetService("ReplicatedStorage")
     local Library = RS:WaitForChild("Library")
     local GUI = require(Library.Client.GUI)
@@ -925,14 +972,13 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     local remote = network and network:FindFirstChild("GoldMachine_Activate")
     if remote and remote:IsA("RemoteFunction") and isEnabled() then
         pcall(function()
-            remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", quantity)
+            remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requested)
         end)
     end
 
     task.wait(0.1)
     TabController.CloseTab("GoldMachine")
-end
--- [END] Box MakeGolden
+end-- [END] Box MakeGolden
 
 -- [START] Box MakeRainbow: chỉ xử lý nhiệm vụ có key "rainbow"
 -- Rainbow cần tạo Golden trung gian trước rồi mới gọi Rainbow machine.
