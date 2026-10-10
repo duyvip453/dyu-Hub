@@ -463,11 +463,11 @@ local QuestMatchRules = {
     -- Route Make Golden and Make Rainbow to separate handlers by their own keys.
     {Group = "MakeGolden", KeepNumbers = true, Keywords = {"make", "golden"}, MatchAll = true},
     {Group = "MakeRainbow", KeepNumbers = true, Keywords = {"make", "rainbow"}, MatchAll = true},
-    -- ROUTING GUARD: LegendaryEggs and Eggs are distinct Groups despite sharing "hatch".
-    -- LegendaryEggs requires BOTH "hatch" and "legend"; keep it before the generic Eggs rule.
-    {Group = "LegendaryEggs", Keywords = {"hatch", "Legendary"}, MatchAll = true},
-    -- Eggs accepts "hatch" only when the title does NOT contain "legend".
-    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"Legendary"}},
+    -- Any quest containing "legendary" must route to LegendaryEggs,
+    -- even if the title does not contain the word "hatch".
+    {Group = "LegendaryEggs", AnyKeywords = {"legendary"}},
+    -- Generic egg-hatching quests route to Hollow Egg only when not legendary.
+    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"legendary"}},
     {Group = "Use", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchant"}, MatchAll = true},
