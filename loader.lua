@@ -607,7 +607,7 @@ local QuestGroupPriority = {
     BestAreaCoinJar = 13,
     BestArea = 14
 }
-local RankOrder = {Easy = 1, Medium = 2, Hard = 3, Extreme = 4}
+local RankScanOrder = {"Easy", "Medium", "Hard", "Extreme"}
 local RankDisplayName = {
     Easy = "Easy",
     Medium = "Medium",
@@ -631,8 +631,9 @@ end
 local function ScanAndSortQuestRanks()
     local found = {}
 
-    -- Chỉ đọc tên nhiệm vụ/group một vòng từ path của từng rank.
-    for rank, path in pairs(QuestRankPaths) do
+    -- Quét đúng một vòng theo thứ tự cố định; rank chỉ để hiển thị, không quyết định ưu tiên.
+    for scanOrder, rank in ipairs(RankScanOrder) do
+        local path = QuestRankPaths[rank]
         local ok, title, progress = pcall(GetQuestInfoFromPath, path)
         if ok and title and title ~= "" and progress and not IsQuestProgressComplete(progress) then
             local group = IdentifyQuestGroup(title)
@@ -642,24 +643,19 @@ local function ScanAndSortQuestRanks()
                     Title = title,
                     Group = group,
                     Priority = QuestGroupPriority[group],
-                    RankOrder = RankOrder[rank] or 99
+                    ScanOrder = scanOrder
                 })
             end
         end
     end
 
-    -- Extreme (rank khó nhất) luôn nằm ở dòng 4.
-    -- Ba rank còn lại xếp theo độ ưu tiên Group; nếu bằng nhau thì rank dễ hơn đứng trước.
+    -- Chỉ Group quyết định nhiệm vụ nào làm trước.
+    -- Nếu nhiều rank có cùng Group ưu tiên, giữ thứ tự quét ổn định; không xếp theo độ khó của rank.
     table.sort(found, function(a, b)
-        local aExtreme = a.Rank == "Extreme"
-        local bExtreme = b.Rank == "Extreme"
-        if aExtreme ~= bExtreme then
-            return not aExtreme
-        end
         if a.Priority ~= b.Priority then
             return a.Priority < b.Priority
         end
-        return a.RankOrder < b.RankOrder
+        return a.ScanOrder < b.ScanOrder
     end)
 
     ClearPriorityTable()
