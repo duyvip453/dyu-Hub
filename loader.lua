@@ -894,7 +894,7 @@ end
 -- end
 -- [END] Box InventoryItems
 
--- [START] Box MakeGolden: quét pet trong Gold Machine; thiếu thì hatch theo chu kỳ 1 phút
+-- [START] Box MakeGolden: mở Gold Machine, craft đúng số lượng nhiệm vụ rồi đóng máy
 QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
@@ -909,107 +909,30 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     local Library = RS:WaitForChild("Library")
     local GUI = require(Library.Client.GUI)
     local TabController = require(Library.Client.TabController)
-    local playerGui = Player:WaitForChild("PlayerGui")
     local targetUID = "f69b09dd148145e19181cbb9d7ff31a1"
 
-    local function ReadItemUID(slot)
-        local properties = slot:FindFirstChild("Properties")
-        if properties then
-            local uidObject = properties:FindFirstChild("itemUID") or properties:FindFirstChild("ItemUID")
-            if uidObject and (uidObject:IsA("StringValue") or uidObject:IsA("TextLabel")) then
-                return tostring(uidObject.Value or uidObject.Text)
-            end
-            local uidAttribute = properties:GetAttribute("itemUID") or properties:GetAttribute("ItemUID")
-            if uidAttribute ~= nil then return tostring(uidAttribute) end
-        end
+    local opened = pcall(function()
+        GUI.GoldMachine()
+        TabController.OpenTab("GoldMachine")
+    end)
+    if not opened then return end
 
-        local uidAttribute = slot:GetAttribute("itemUID") or slot:GetAttribute("ItemUID")
-        if uidAttribute ~= nil then return tostring(uidAttribute) end
-        local uidObject = slot:FindFirstChild("itemUID") or slot:FindFirstChild("ItemUID")
-        if uidObject and (uidObject:IsA("StringValue") or uidObject:IsA("TextLabel")) then
-            return tostring(uidObject.Value or uidObject.Text)
-        end
-        return nil
-    end
-
-    local function ReadQuantity(slot)
-        local quantity = slot:FindFirstChild("Quantity", true)
-        if not quantity or not (quantity:IsA("TextLabel") or quantity:IsA("TextButton")) then
-            return nil
-        end
-        local raw = tostring(quantity.Text or ""):gsub(",", ""):gsub("%s+", "")
-        local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
-        number = tonumber(number)
-        if number then
-            local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
-            return math.floor(number * multiplier)
-        end
-        local digits = tonumber(raw:match("(%d+)"))
-        return digits
-    end
-
-    local function GetNormalPetQuantity()
-        local machines = playerGui:FindFirstChild("_MACHINES")
-        local machine = machines and machines:FindFirstChild("GoldMachine")
-        local frame = machine and machine:FindFirstChild("Frame")
-        local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
-        local items = itemsFrame and itemsFrame:FindFirstChild("Items")
-        if not items then return nil end
-
-        for _, object in ipairs(items:GetDescendants()) do
-            if object.Name == "ItemSlot" and ReadItemUID(object) == targetUID then
-                local quantity = ReadQuantity(object)
-                if quantity ~= nil then return quantity end
-            end
-        end
-        return nil
-    end
-
-    while isEnabled() do
-        -- Mỗi vòng đều mở máy trước, vì UI machine bị đóng khi chuyển sang hatch.
-        local opened = pcall(function()
-            GUI.GoldMachine()
-            TabController.OpenTab("GoldMachine")
-        end)
-        if not opened then return end
-        task.wait(0.3)
-        if not isEnabled() then
-            pcall(function() TabController.CloseTab("GoldMachine") end)
-            return
-        end
-
-        local quantity = GetNormalPetQuantity()
-        if quantity ~= nil and quantity / 10 >= requested then
-            local network = RS:FindFirstChild("Network")
-            local remote = network and network:FindFirstChild("GoldMachine_Activate")
-            if remote and remote:IsA("RemoteFunction") and isEnabled() then
-                pcall(function()
-                    remote:InvokeServer(targetUID, requested)
-                end)
-            end
-            task.wait(0.1)
-            pcall(function() TabController.CloseTab("GoldMachine") end)
-            return
-        end
-
-        -- Chưa đủ: đóng machine rồi hatch Hollow Egg trong tối đa 60 giây.
+    task.wait(0.3)
+    if not isEnabled() then
         pcall(function() TabController.CloseTab("GoldMachine") end)
-        if not isEnabled() then return end
-
-        local hatchDeadline = os.clock() + 60
-        local function HatchWindowEnabled()
-            return isEnabled() and os.clock() < hatchDeadline
-        end
-        RunQuestEggHatch(
-            "Hollow Egg",
-            Vector3.new(-15043.85, 17.57, 2120.55),
-            questTitle,
-            HatchWindowEnabled
-        )
-
-        -- Hết 1 phút thì vòng lặp mở lại machine và quét lại Quantity.
-        if not isEnabled() then return end
+        return
     end
+
+    local network = RS:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild("GoldMachine_Activate")
+    if remote and remote:IsA("RemoteFunction") and isEnabled() then
+        pcall(function()
+            remote:InvokeServer(targetUID, requested)
+        end)
+    end
+
+    task.wait(0.1)
+    pcall(function() TabController.CloseTab("GoldMachine") end)
 end
 -- [END] Box MakeGolden
 
