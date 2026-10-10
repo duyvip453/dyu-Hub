@@ -6,7 +6,7 @@ local Player = game:GetService("Players").LocalPlayer
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 
 local EventSettings = {
-    -- Khai báo các setting riêng của Event tại đây.
+    AutoHatchWarBossTap = false,
 }
 
 local function SaveConfig()
@@ -88,8 +88,25 @@ EventTab:CreateLabel({
     Style = 1
 })
 
--- Khi thêm setting/toggle Event: khai báo key trong EventSettings,
--- dùng EventSettings.Key làm CurrentValue và gọi SaveConfig() trong callback.
--- [END] Khởi tạo giao diện riêng của Event
+-- [START] TOGGLE: AUTO HW BOSS TAP
+-- Toggle này lưu trạng thái ON/OFF; không tự gửi RemoteEvent tới server game.
+EventTab:CreateSection("Hatch War")
 
+EventTab:CreateToggle({
+    Name = "Auto HW Boss Tap",
+    CurrentValue = EventSettings.AutoHatchWarBossTap,
+    Callback = function(Value)
+        EventSettings.AutoHatchWarBossTap = Value
+        SaveConfig()
+
+        if Value then
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: ON")
+        else
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: OFF")
+        end
+    end
+})
+-- [END] TOGGLE: AUTO HW BOSS TAP
+
+-- [END] Khởi tạo giao diện riêng của Event
 -- [END] EVENT MODULE
