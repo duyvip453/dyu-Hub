@@ -420,7 +420,8 @@ local QuestScriptBoxes = {
     LegendaryEggs = nil,
     Eggs = nil,
     InventoryItems = nil,
-    MakePet = nil,
+    MakeGolden = nil,
+    MakeRainbow = nil,
     UpdatePotion = nil,
     UpdateEnchant = nil
 }
@@ -459,8 +460,9 @@ local QuestMatchRules = {
     -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
     {Group = "UpdatePotion", Keywords = {"upgrade", "potion"}, MatchAll = true},
     {Group = "UpdateEnchant", Keywords = {"upgrade", "enchant"}, MatchAll = true},
-    -- MakePet is routed to its group; the handler distinguishes Golden from Rainbow.
-    {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
+    -- Route Make Golden and Make Rainbow to separate handlers by their own keys.
+    {Group = "MakeGolden", KeepNumbers = true, Keywords = {"make", "golden"}, MatchAll = true},
+    {Group = "MakeRainbow", KeepNumbers = true, Keywords = {"make", "rainbow"}, MatchAll = true},
     -- ROUTING GUARD: LegendaryEggs and Eggs are distinct Groups despite sharing "hatch".
     -- LegendaryEggs requires BOTH "hatch" and "legend"; keep it before the generic Eggs rule.
     {Group = "LegendaryEggs", Keywords = {"hatch", "Legendary"}, MatchAll = true},
@@ -892,30 +894,18 @@ end
 -- end
 -- [END] Box InventoryItems
 
--- [START] Box MakePet: nhận diện Golden/Rainbow và gọi remote máy tương ứng
--- MakePet: Golden consumes normal pets; Rainbow consumes Golden pets only.
--- The machine remotes require the inventory pet ID and the amount to consume.
-QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
+-- [START] Box MakeGolden: chỉ xử lý nhiệm vụ có key "golden"
+-- Golden sử dụng 10 pet thường cho mỗi Golden.
+QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
     local title = string.lower(tostring(questTitle or ""))
-    local isRainbow = title:find("rainbow", 1, true) ~= nil
-    local isGolden = title:find("golden", 1, true) ~= nil
-    if not isRainbow and not isGolden then
-                return
-    end
+    if not title:find("golden", 1, true) then return end
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
-    if not requested or requested < 1 then
-                return
-    end
+    if not requested or requested < 1 then return end
     requested = math.floor(requested)
+    local requiredNormalPets = requested * 10
 
-    -- [GOLDEN] 10 pet thường tạo được 1 Golden.
-    -- [RAINBOW] 100 pet thường tạo được 1 Rainbow: tạo Golden trước, sau đó ghép Rainbow.
-    local requiredNormalPets = requested * (isRainbow and 100 or 10)
-    local requiredGoldenPets = requested * 10
-
-    -- Đọc Quantity từ ItemSlot trong GoldMachine; dùng chung cho kiểm tra Golden và Rainbow.
     local function GetGoldMachineQuantity()
         local playerGui = Player:FindFirstChild("PlayerGui")
         local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
@@ -931,9 +921,8 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
             if object.Name == "ItemSlot" then table.insert(slots, object) end
         end
         for _, slot in ipairs(slots) do
-            local icon = slot:FindFirstChild("Icon")
             local quantity = slot:FindFirstChild("Quantity")
-            if icon and quantity and quantity:IsA("TextLabel") then
+            if quantity and quantity:IsA("TextLabel") then
                 local raw = quantity.Text:gsub(",", ""):gsub("%s+", "")
                 local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
                 number = tonumber(number)
@@ -948,65 +937,114 @@ QuestScriptBoxes.MakePet = function(questTitle, rank, isEnabled)
         return nil
     end
 
-    local function MakeAtMachine(remoteName, petId, amount, label)
-        if not isEnabled() then return false end
-        local network = ReplicatedStorage:FindFirstChild("Network")
-        local remote = network and network:FindFirstChild(remoteName)
-        if not remote then
-                        return false
-        end
-        local ok, result = pcall(function()
-            return remote:InvokeServer(petId, amount)
-        end)
-        if not ok then
-                        return false
-        end
-                return true
-    end
-
-    -- Dùng lại helper hatch Hollow Egg hiện có; chỉ thêm điều kiện dừng theo Quantity.
-    local function HatchUntilEnough()
-        return RunQuestEggHatch(
+    local quantity = GetGoldMachineQuantity()
+    if not quantity then return end
+    if quantity < requiredNormalPets then
+        local hatched = RunQuestEggHatch(
             "Hollow Egg",
             Vector3.new(-15044.67, 16.34, 2147.03),
             questTitle,
             isEnabled,
             function()
-                local quantity = GetGoldMachineQuantity()
-                return quantity ~= nil and quantity >= requiredNormalPets
+                local current = GetGoldMachineQuantity()
+                return current ~= nil and current >= requiredNormalPets
             end
         )
+        if not hatched then return end
+    end
+    if not isEnabled() then return end
+    quantity = GetGoldMachineQuantity()
+    if not quantity or quantity < requiredNormalPets then return end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild("GoldMachine_Activate")
+    if not remote or not remote:IsA("RemoteFunction") then return end
+    pcall(function()
+        remote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
+    end)
+end
+-- [END] Box MakeGolden
+
+-- [START] Box MakeRainbow: chỉ xử lý nhiệm vụ có key "rainbow"
+-- Rainbow cần tạo Golden trung gian trước rồi mới gọi Rainbow machine.
+QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+    local title = string.lower(tostring(questTitle or ""))
+    if not title:find("rainbow", 1, true) then return end
+
+    local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
+    if not requested or requested < 1 then return end
+    requested = math.floor(requested)
+    local requiredNormalPets = requested * 100
+    local requiredGoldenPets = requested * 10
+
+    local function GetGoldMachineQuantity()
+        local playerGui = Player:FindFirstChild("PlayerGui")
+        local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
+        local machine = machines and machines:FindFirstChild("GoldMachine")
+        local frame = machine and machine:FindFirstChild("Frame")
+        local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
+        local items = itemsFrame and itemsFrame:FindFirstChild("Items")
+        local pets = items and items:FindFirstChild("Pets")
+        if not pets then return nil end
+        local slots = {}
+        if pets.Name == "ItemSlot" then table.insert(slots, pets) end
+        for _, object in ipairs(pets:GetDescendants()) do
+            if object.Name == "ItemSlot" then table.insert(slots, object) end
+        end
+        for _, slot in ipairs(slots) do
+            local quantity = slot:FindFirstChild("Quantity")
+            if quantity and quantity:IsA("TextLabel") then
+                local raw = quantity.Text:gsub(",", ""):gsub("%s+", "")
+                local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
+                number = tonumber(number)
+                if number then
+                    local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
+                    return math.floor(number * multiplier)
+                end
+                local digits = tonumber(raw:match("(%d+)"))
+                if digits then return digits end
+            end
+        end
+        return nil
     end
 
     local quantity = GetGoldMachineQuantity()
-    if not quantity then
-                return
-    end
+    if not quantity then return end
     if quantity < requiredNormalPets then
-                if not HatchUntilEnough() then return end
+        local hatched = RunQuestEggHatch(
+            "Hollow Egg",
+            Vector3.new(-15044.67, 16.34, 2147.03),
+            questTitle,
+            isEnabled,
+            function()
+                local current = GetGoldMachineQuantity()
+                return current ~= nil and current >= requiredNormalPets
+            end
+        )
+        if not hatched then return end
     end
     if not isEnabled() then return end
-
-    -- Kiểm tra lại số lượng ngay trước khi gọi máy.
     quantity = GetGoldMachineQuantity()
-    if not quantity or quantity < requiredNormalPets then
-                return
-    end
+    if not quantity or quantity < requiredNormalPets then return end
 
-    if isGolden then
-        MakeAtMachine("GoldMachine_Activate", "f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets, "Golden")
-        return
-    end
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local goldRemote = network and network:FindFirstChild("GoldMachine_Activate")
+    if not goldRemote or not goldRemote:IsA("RemoteFunction") then return end
+    local goldOk = pcall(function()
+        goldRemote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
+    end)
+    if not goldOk or not isEnabled() then return end
 
-    -- [RAINBOW] Đủ 100 pet thường cho mỗi Rainbow: ghép Golden trước (10 pet thường/Golden),
-    -- rồi mới dùng 10 Golden cho mỗi Rainbow. Quantity của GoldMachine được kiểm tra trước bước này.
-    local goldenMade = MakeAtMachine("GoldMachine_Activate", "f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets, "Golden trung gian")
-    if not goldenMade or not isEnabled() then return end
     task.wait(1)
     if not isEnabled() then return end
-    MakeAtMachine("RainbowMachine_Activate", "192c592642a445c8963250710c12bf69", requiredGoldenPets, "Rainbow")
+    local rainbowRemote = network:FindFirstChild("RainbowMachine_Activate")
+    if not rainbowRemote or not rainbowRemote:IsA("RemoteFunction") then return end
+    pcall(function()
+        rainbowRemote:InvokeServer("192c592642a445c8963250710c12bf69", requiredGoldenPets)
+    end)
 end
--- [END] Box MakePet
+-- [END] Box MakeRainbow
 
 -- [START] Box UpdatePotion: khung trống chờ bổ sung logic
 -- Chưa triển khai UpdatePotion.
