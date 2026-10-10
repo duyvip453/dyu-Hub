@@ -589,8 +589,8 @@ local function SetQuestRankEnabled(rank, value)
     SaveConfig()
 end
 
--- [AUTO FARM RANK TOGGLE + BẢNG ƯU TIÊN]
--- Giai đoạn này chỉ quét một vòng và sắp xếp danh sách; chưa gọi các ScriptBox.
+-- [AUTO FARM RANK: BẢNG ƯU TIÊN + BỘ ĐIỀU PHỐI]
+-- QuestGroupPriority: số nhỏ hơn nghĩa là nhiệm vụ được ưu tiên chạy trước.
 local QuestGroupPriority = {
     Use = 1,
     CollectPotions = 2,
@@ -628,10 +628,11 @@ local function ClearPriorityTable()
     end
 end
 
+-- ScanAndSortQuestRanks: quét im lặng bốn rank, bỏ nhiệm vụ hoàn thành,
+-- sắp xếp theo Group priority rồi cập nhật tối đa bốn dòng trên bảng.
 local function ScanAndSortQuestRanks()
     local found = {}
 
-    -- Quét đúng một vòng qua path của cả bốn rank.
     for scanOrder, rank in ipairs(RankScanOrder) do
         local path = QuestRankPaths[rank]
         local ok, title, progress = pcall(GetQuestInfoFromPath, path)
@@ -650,27 +651,105 @@ local function ScanAndSortQuestRanks()
         end
     end
 
-    -- Ưu tiên tuyệt đối theo danh sách Group người dùng cung cấp (1 là cao nhất).
-    -- Rank chỉ là thông tin hiển thị, không ảnh hưởng thứ tự sắp xếp.
     table.sort(found, function(a, b)
         if a.Priority ~= b.Priority then
             return a.Priority < b.Priority
         end
-        -- Nếu cùng Group, giữ thứ tự quét ổn định để tránh thứ tự ngẫu nhiên.
         return a.ScanOrder < b.ScanOrder
     end)
 
+    -- Reset bảng trước mỗi lần cập nhật để không giữ lại dòng từ lần quét trước.
     ClearPriorityTable()
-    local displayOrder = 0
-    for _, item in ipairs(found) do
-        displayOrder = displayOrder + 1
-        if displayOrder > 4 then
-            break
-        end
-        PriorityLabels[displayOrder]:Set(string.format("%d. %s", displayOrder, item.Title))
+    for index = 1, math.min(4, #found) do
+        PriorityLabels[index]:Set(string.format("%d. %s", index, found[index].Title))
     end
+
+    return found
 end
 
+-- StopDispatchedQuest: tăng Generation để box đang chạy biết phải dừng,
+-- rồi xóa trạng thái active của rank mà không phát log hoặc cảnh báo.
+local function StopDispatchedQuest(rank)
+    local state = QuestRankState[rank]
+    if not state then return end
+    state.Generation = state.Generation + 1
+    state.Running = false
+    state.ActiveQuest = nil
+    state.ActiveGroup = nil
+    state.CompletedQuest = nil
+    state.CompleteWaitUntil = 0
+end
+
+-- AutoFarmRankLoop: chờ một giây sau khi bật, liên tục quét và chỉ dispatch
+-- nhiệm vụ đứng đầu bảng. Khi progress đủ, hủy box hiện tại, quét/reset bảng
+-- một lần nữa rồi mới cho phép chọn nhiệm vụ đứng đầu tiếp theo.
+local AutoFarmRankGeneration = 0
+local AutoFarmRankRunning = false
+
+local function StartAutoFarmRankLoop()
+    AutoFarmRankGeneration = AutoFarmRankGeneration + 1
+    local loopGeneration = AutoFarmRankGeneration
+    if AutoFarmRankRunning then return end
+    AutoFarmRankRunning = true
+
+    task.spawn(function()
+        task.wait(1)
+
+        while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
+            local found = ScanAndSortQuestRanks()
+            local selected = found[1]
+
+            if not selected then
+                task.wait(0.5)
+            else
+                local rank = selected.Rank
+                local questTitle = selected.Title
+                local questGroup = selected.Group
+                local path = QuestRankPaths[rank]
+
+                -- Chỉ khởi chạy box nếu đúng rank vẫn đang có đúng nhiệm vụ chưa hoàn thành.
+                local currentTitle, currentProgress = GetQuestInfoFromPath(path)
+                if currentTitle == questTitle
+                    and currentProgress
+                    and not IsQuestProgressComplete(currentProgress) then
+                    DispatchQuest(rank, questTitle, questGroup)
+
+                    -- Theo dõi progress yên lặng; không cập nhật progress lên UI và không log.
+                    local completed = false
+                    while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
+                        local latestTitle, latestProgress = GetQuestInfoFromPath(path)
+                        if latestTitle ~= questTitle or not latestProgress then
+                            break
+                        end
+                        if IsQuestProgressComplete(latestProgress) then
+                            completed = true
+                            break
+                        end
+                        task.wait(0.25)
+                    end
+
+                    -- Hủy box cũ trước khi quét lại để box không chạy chồng với nhiệm vụ mới.
+                    StopDispatchedQuest(rank)
+                    if not Settings.AutoQuestRank or loopGeneration ~= AutoFarmRankGeneration then
+                        break
+                    end
+
+                    -- Khi quest hoàn thành hoặc thay đổi, quét lại và reset bảng trước lượt kế tiếp.
+                    ScanAndSortQuestRanks()
+                    task.wait(0.1)
+                else
+                    task.wait(0.25)
+                end
+            end
+        end
+
+        if loopGeneration == AutoFarmRankGeneration then
+            AutoFarmRankRunning = false
+        end
+    end)
+end
+
+-- Auto Farm Rank toggle: bật/tắt đồng bộ bốn rank và vòng điều phối duy nhất.
 Tab1:CreateToggle({
     Name = "Auto Farm Rank",
     CurrentValue = Settings.AutoQuestRank,
@@ -682,17 +761,20 @@ Tab1:CreateToggle({
         SaveConfig()
 
         if Value then
-            ScanAndSortQuestRanks()
+            StartAutoFarmRankLoop()
         else
+            -- Vô hiệu hóa vòng quét hiện tại và dừng box nào đang chạy.
+            AutoFarmRankGeneration = AutoFarmRankGeneration + 1
+            for _, rank in ipairs(RankScanOrder) do
+                StopDispatchedQuest(rank)
+            end
+            AutoFarmRankRunning = false
             ClearPriorityTable()
         end
     end
 })
 
--- Chưa dispatch nhiệm vụ ở giai đoạn này. Bật toggle chỉ quét một vòng và cập nhật bảng.
--- Logic gọi nhiệm vụ, chờ hoàn thành và quét lại sẽ được bổ sung ở bước tiếp theo.
-
--- [END] Auto Farm Quest: bộ quét tiến độ và điều phối nhiệm vụ
+-- [END] AUTO FARM RANK: BẢNG ƯU TIÊN + BỘ ĐIỀU PHỐI
 
 -- [START] Các box xử lý riêng theo loại nhiệm vụ
 -- SCRIPT BOXES (keep these assignments at the bottom; fill in each function body).
