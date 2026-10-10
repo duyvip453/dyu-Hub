@@ -43,42 +43,39 @@ end
 LoadConfig()
 -- [END] Config riêng của Event
 
--- [START] Tải UI và tạo cửa sổ theo đúng cách loader.lua khởi tạo
-local BACKGROUND_URL = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
-local fetchOk, rawCode = pcall(function()
-    return game:HttpGet(BACKGROUND_URL)
-end)
-if not fetchOk or type(rawCode) ~= "string" or rawCode == "" then
-    warn("[DYU HUB / EVENT] Không tải được backgroud.lua.")
+-- [START] Tải module giao diện và tạo cửa sổ/tab chính
+local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
+local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
+if not success or type(rawCode) ~= "string" or rawCode == "" then
     return
 end
-
 local compileUI = loadstring(rawCode)
 if type(compileUI) ~= "function" then
-    warn("[DYU HUB / EVENT] Không biên dịch được backgroud.lua.")
     return
 end
-
 local moduleOk, UIModule = pcall(compileUI)
 if not moduleOk or type(UIModule) ~= "table" or type(UIModule.Init) ~= "function" then
-    warn("[DYU HUB / EVENT] UI module không hợp lệ.")
     return
 end
-
 local initOk, Window = pcall(function()
     return UIModule:Init({
         ConfigurationSaving = {
             Enabled = true,
             FolderName = "DYU_HUB",
-            FileName = "EventConfig"
+            FileName = "Config"
         }
     })
 end)
 if not initOk or type(Window) ~= "table" or type(Window.CreateTab) ~= "function" then
-    warn("[DYU HUB / EVENT] Không tạo được cửa sổ chính.")
     return
 end
--- [END] Tải UI và tạo cửa sổ theo đúng cách loader.lua khởi tạo
+local EventTab = Window:CreateTab({
+    Name = "Event",
+    Icon = "person",
+    ImageSource = "Material",
+    ShowTitle = true
+})
+-- [END] Tải module giao diện và tạo cửa sổ/tab chính
 
 -- [START] Tạo tab Event theo đúng API của loader.lua
 local EventTab = Window:CreateTab({
