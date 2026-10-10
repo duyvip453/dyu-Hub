@@ -680,9 +680,9 @@ local function StopDispatchedQuest(rank)
     state.CompleteWaitUntil = 0
 end
 
--- AutoFarmRankLoop: chờ một giây sau khi bật, liên tục quét và chỉ dispatch
--- nhiệm vụ đứng đầu bảng. Khi progress đủ, hủy box hiện tại, quét/reset bảng
--- một lần nữa rồi mới cho phép chọn nhiệm vụ đứng đầu tiếp theo.
+-- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
+-- Chỉ dispatch nhiệm vụ đầu bảng khi chưa có box nào đang được điều phối.
+-- Trong lúc box chạy, mỗi vòng vẫn cập nhật bảng và đọc progress im lặng.
 local AutoFarmRankGeneration = 0
 local AutoFarmRankRunning = false
 
@@ -694,61 +694,64 @@ local function StartAutoFarmRankLoop()
 
     task.spawn(function()
         task.wait(1)
+        local activeRank = nil
+        local activeTitle = nil
 
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
+            -- Quét toàn bộ rank liên tục; hàm tự reset bảng rồi điền kết quả mới.
             local found = ScanAndSortQuestRanks()
-            local selected = found[1]
 
-            if not selected then
-                task.wait(0.5)
-            else
-                local rank = selected.Rank
-                local questTitle = selected.Title
-                local questGroup = selected.Group
-                local path = QuestRankPaths[rank]
+            if activeRank then
+                -- Theo dõi progress của đúng quest/rank đang chạy; không hiển thị progress và không log.
+                local activePath = QuestRankPaths[activeRank]
+                local latestTitle, latestProgress = GetQuestInfoFromPath(activePath)
+                local isFinished = latestTitle == activeTitle
+                    and latestProgress
+                    and IsQuestProgressComplete(latestProgress)
+                local questChanged = latestTitle ~= activeTitle or not latestProgress
 
-                -- Chỉ khởi chạy box nếu đúng rank vẫn đang có đúng nhiệm vụ chưa hoàn thành.
-                local currentTitle, currentProgress = GetQuestInfoFromPath(path)
-                if currentTitle == questTitle
-                    and currentProgress
-                    and not IsQuestProgressComplete(currentProgress) then
-                    DispatchQuest(rank, questTitle, questGroup)
-
-                    -- Theo dõi progress yên lặng; không cập nhật progress lên UI và không log.
-                    local completed = false
-                    while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
-                        local latestTitle, latestProgress = GetQuestInfoFromPath(path)
-                        if latestTitle ~= questTitle or not latestProgress then
-                            break
-                        end
-                        if IsQuestProgressComplete(latestProgress) then
-                            completed = true
-                            break
-                        end
-                        task.wait(0.25)
-                    end
-
-                    -- Hủy box cũ trước khi quét lại để box không chạy chồng với nhiệm vụ mới.
-                    StopDispatchedQuest(rank)
-                    if not Settings.AutoQuestRank or loopGeneration ~= AutoFarmRankGeneration then
-                        break
-                    end
-
-                    -- Khi quest hoàn thành hoặc thay đổi, quét lại và reset bảng trước lượt kế tiếp.
+                if isFinished or questChanged then
+                    -- Vô hiệu hóa box cũ trước khi reset bảng và chọn nhiệm vụ kế tiếp.
+                    StopDispatchedQuest(activeRank)
+                    activeRank = nil
+                    activeTitle = nil
                     ScanAndSortQuestRanks()
                     task.wait(0.1)
                 else
-                    task.wait(0.25)
+                    task.wait(0.5)
+                end
+            else
+                -- Khi rảnh, chỉ chọn nhiệm vụ đầu bảng đã được sắp theo Group priority.
+                local selected = found[1]
+                if not selected then
+                    task.wait(0.5)
+                else
+                    local path = QuestRankPaths[selected.Rank]
+                    local currentTitle, currentProgress = GetQuestInfoFromPath(path)
+
+                    -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
+                    if currentTitle == selected.Title
+                        and currentProgress
+                        and not IsQuestProgressComplete(currentProgress) then
+                        activeRank = selected.Rank
+                        activeTitle = selected.Title
+                        DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                    else
+                        task.wait(0.1)
+                    end
                 end
             end
         end
 
+        -- Nếu toggle bị tắt trong khi box chạy, vô hiệu hóa box trước khi kết thúc loop.
+        if activeRank then
+            StopDispatchedQuest(activeRank)
+        end
         if loopGeneration == AutoFarmRankGeneration then
             AutoFarmRankRunning = false
         end
     end)
 end
-
 -- Auto Farm Rank toggle: bật/tắt đồng bộ bốn rank và vòng điều phối duy nhất.
 Tab1:CreateToggle({
     Name = "Auto Farm Rank",
