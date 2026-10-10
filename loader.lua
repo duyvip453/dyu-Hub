@@ -783,7 +783,7 @@ QuestScriptBoxes.BestAreaComet = function(questTitle, rank, isEnabled)
         root.CFrame = CFrame.new(Vector3.new(-15044.65, 16.34, 2203.12))
     end)
     if not ok then return end
-    task.wait(1)
+    task.wait(2)
     if not isEnabled() then return end
     local network = ReplicatedStorage:WaitForChild("Network", 5)
     local remote = network and network:WaitForChild("Comet_Spawn", 5)
@@ -806,7 +806,7 @@ QuestScriptBoxes.BestAreaCoinJar = function(questTitle, rank, isEnabled)
         root.CFrame = CFrame.new(Vector3.new(-15044.65, 16.34, 2203.12))
     end)
     if not ok then return end
-    task.wait(1)
+    task.wait(2)
     if not isEnabled() then return end
     local network = ReplicatedStorage:WaitForChild("Network", 5)
     local remote = network and network:WaitForChild("CoinJar_Spawn", 5)
@@ -829,7 +829,7 @@ QuestScriptBoxes.BestAreaLuckyBlock = function(questTitle, rank, isEnabled)
         root.CFrame = CFrame.new(Vector3.new(-15044.65, 16.34, 2203.12))
     end)
     if not ok then return end
-    task.wait(1)
+    task.wait(2)
     if not isEnabled() then return end
     local network = ReplicatedStorage:WaitForChild("Network", 5)
     local remote = network and network:WaitForChild("MiniLuckyBlock_Consume", 5)
@@ -852,7 +852,7 @@ QuestScriptBoxes.BestAreaPinata = function(questTitle, rank, isEnabled)
         root.CFrame = CFrame.new(Vector3.new(-15044.65, 16.34, 2203.12))
     end)
     if not ok then return end
-    task.wait(1)
+    task.wait(2)
     if not isEnabled() then return end
     local network = ReplicatedStorage:WaitForChild("Network", 5)
     local remote = network and network:WaitForChild("MiniPinata_Consume", 5)
