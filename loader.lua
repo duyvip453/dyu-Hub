@@ -38,7 +38,7 @@ end
 
 do
     local data = LoadUpgradeIDRegistry(
-        "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/upd-enchant",
+        "https://raw.githubusercontent.com/duyvip453/dyu-Hub/main/upd-enchant",
         "Enchant"
     )
     if data then EnchantUpgradeIDs = data end
@@ -713,15 +713,16 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
 end
 -- [END] Box CollectPotions
 
--- [START] Box CollectEnchants: chọn ngẫu nhiên ID enchant rồi gọi máy nâng cấp
+-- [START] Box CollectEnchants: lấy ID ngẫu nhiên, nâng cấp 1 lần mỗi lượt đến khi quest xong
 QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
-    local entries = EnchantUpgradeIDs.Entries or {}
+    local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries
+    if type(entries) ~= "table" or #entries == 0 then return end
+
     local usableEntries = {}
     for _, entry in ipairs(entries) do
         if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
-            -- Chỉ dùng những ID đã được điền; registry hiện để trống sẽ tự bỏ qua.
             table.insert(usableEntries, entry)
         end
     end
@@ -732,13 +733,24 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     local remote = network and network:FindFirstChild(remoteName)
     if not remote or not remote:IsA("RemoteFunction") then return end
 
+    local questPath = QuestRankPaths[rank]
+    if not questPath then return end
+
     while isEnabled() do
+        -- Kiểm tra chính quest/rank này để dừng ngay khi hoàn thành hoặc đổi nhiệm vụ.
+        local currentTitle, currentProgress = GetQuestInfoFromPath(questPath)
+        if not currentTitle or currentTitle ~= questTitle then return end
+        if IsQuestProgressComplete(currentProgress) then return end
+        if not isEnabled() then return end
+
+        -- Mỗi lượt chọn ngẫu nhiên một ID hợp lệ và gọi với số lượng 1.
         local entry = usableEntries[math.random(1, #usableEntries)]
-        if not isEnabled() then break end
-        pcall(function()
+        local ok = pcall(function()
             remote:InvokeServer(entry.Id, 1)
         end)
-        task.wait(0.75)
+
+        -- Nếu lời gọi thất bại, tránh gọi dồn liên tục.
+        task.wait(ok and 0.75 or 1)
     end
 end
 -- [END] Box CollectEnchants
