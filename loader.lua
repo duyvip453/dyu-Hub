@@ -665,7 +665,7 @@ local function ScanAndSortQuestRanks()
         local item = found[index]
         PriorityLabels[index]:Set(string.format(
             "%d. %s",
-            index,
+            item.Priority,
             item.Title
         ))
     end
