@@ -55,7 +55,8 @@ local Settings = {
     AutoQuestEasy = false,
     AutoQuestMedium = false,
     AutoQuestHard = false,
-    AutoQuestExtreme = false
+    AutoQuestExtreme = false,
+    AutoQuestRank = false
 }
 
 local function SaveConfig()
@@ -305,10 +306,10 @@ isLoaded = true
 
 Tab1:CreateSection("Auto Farm Quest")
 local QuestRankEnabled = {
-    Easy = Settings.AutoQuestEasy,
-    Medium = Settings.AutoQuestMedium,
-    Hard = Settings.AutoQuestHard,
-    Extreme = Settings.AutoQuestExtreme
+    Easy = Settings.AutoQuestRank,
+    Medium = Settings.AutoQuestRank,
+    Hard = Settings.AutoQuestRank,
+    Extreme = Settings.AutoQuestRank
 }
 local QuestRankPaths = {
     Easy = {"GoalsSide", "Frame", "Quests", "QuestsGradient", "QuestsHolder", "Easy"},
@@ -588,38 +589,17 @@ local function SetQuestRankEnabled(rank, value)
     SaveConfig()
 end
 
--- [TEST TOGGLES / TEMPORARY ROUTING]
--- 4 nút dưới đây chỉ để test từng rank độc lập. Khi chuyển sang Auto Rank,
--- thay lớp toggle này bằng một toggle duy nhất; không đặt logic nhiệm vụ trong callback nút.
+-- [AUTO FARM RANK TOGGLE]
+-- Toggle giao diện duy nhất; logic ưu tiên rank/nhiệm vụ sẽ được chốt riêng sau.
 Tab1:CreateToggle({
-    Name = "Auto Farm Quest - Easy",
-    CurrentValue = QuestRankEnabled.Easy,
+    Name = "Auto Farm Rank",
+    CurrentValue = Settings.AutoQuestRank,
     Callback = function(Value)
-        SetQuestRankEnabled("Easy", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Auto Farm Quest - Medium",
-    CurrentValue = QuestRankEnabled.Medium,
-    Callback = function(Value)
-        SetQuestRankEnabled("Medium", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Auto Farm Quest - Hard",
-    CurrentValue = QuestRankEnabled.Hard,
-    Callback = function(Value)
-        SetQuestRankEnabled("Hard", Value)
-    end
-})
-
-Tab1:CreateToggle({
-    Name = "Auto Farm Quest - Extreme",
-    CurrentValue = QuestRankEnabled.Extreme,
-    Callback = function(Value)
-        SetQuestRankEnabled("Extreme", Value)
+        Settings.AutoQuestRank = Value
+        for _, rank in ipairs({"Easy", "Medium", "Hard", "Extreme"}) do
+            SetQuestRankEnabled(rank, Value)
+        end
+        SaveConfig()
     end
 })
 
