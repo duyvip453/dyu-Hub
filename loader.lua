@@ -1183,3 +1183,31 @@ QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
 end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
+
+
+-- [START] Nạp tab Event vào cửa sổ chính
+do
+    local eventUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/event.lua?v=" .. math.random(1, 100000)
+    local eventOk, eventSource = pcall(function()
+        return game:HttpGet(eventUrl)
+    end)
+    if eventOk and type(eventSource) == "string" and eventSource ~= "" then
+        local compileEvent = loadstring(eventSource)
+        if type(compileEvent) == "function" then
+            local moduleOk, attachEvent = pcall(compileEvent)
+            if moduleOk and type(attachEvent) == "function" then
+                local attachOk, attachErr = pcall(attachEvent, Window)
+                if not attachOk then
+                    warn("[DYU HUB] Không khởi tạo được tab Event: " .. tostring(attachErr))
+                end
+            else
+                warn("[DYU HUB] event.lua không trả về hàm khởi tạo tab.")
+            end
+        else
+            warn("[DYU HUB] Không biên dịch được event.lua.")
+        end
+    else
+        warn("[DYU HUB] Không tải được event.lua.")
+    end
+end
+-- [END] Nạp tab Event vào cửa sổ chính
