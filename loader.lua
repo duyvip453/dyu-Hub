@@ -916,7 +916,7 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
 end
 -- [END] Box MakeGolden
 
--- [START] Box MakeRainbow: thử Rainbow trước, chỉ craft bù nếu đúng quest vẫn còn
+-- [START] Box MakeRainbow: thử đúng số Rainbow cần; nếu quest còn thì craft Golden rồi Rainbow
 QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
@@ -938,25 +938,25 @@ QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     if not goldenRemote or not goldenRemote:IsA("RemoteFunction") then return end
     if not isEnabled() then return end
 
-    -- Thử craft Rainbow đúng một lần trước.
+    -- Bước 1: thử craft đúng số Rainbow mà quest yêu cầu.
     pcall(function()
-        rainbowRemote:InvokeServer(rainbowUID, requiredGoldenPets)
+        rainbowRemote:InvokeServer(rainbowUID, requested)
     end)
 
-    -- Chờ server/UI cập nhật tiến độ của chính rank đang được bật.
-    task.wait(3)
+    -- Bước 2: chờ 1 giây rồi quét lại đúng rank/quest đang chạy.
+    task.wait(1)
     if not isEnabled() then return end
 
     local questPath = QuestRankPaths[rank]
     if not questPath then return end
     local currentTitle, currentProgress = GetQuestInfoFromPath(questPath)
 
-    -- Không craft bù nếu quest đã đổi/mất hoặc tiến độ đã hoàn tất.
+    -- Quest đã đổi/mất hoặc đã đầy thì không craft bù.
     if not currentTitle or currentTitle ~= questTitle then return end
     if IsQuestProgressComplete(currentProgress) then return end
     if not isEnabled() then return end
 
-    -- Quest Rainbow vẫn còn và chưa đầy: craft Golden trung gian một lần.
+    -- Quest vẫn chưa hoàn thành: craft Golden số lượng Rainbow yêu cầu x10.
     pcall(function()
         goldenRemote:InvokeServer(goldenUID, requiredGoldenPets)
     end)
@@ -964,12 +964,12 @@ QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     task.wait(0.5)
     if not isEnabled() then return end
 
-    -- Craft Rainbow phần còn thiếu; tham số remote là số Golden cần dùng.
+    -- Sau 0,5 giây, craft Rainbow với số lượng Golden cần dùng.
     pcall(function()
         rainbowRemote:InvokeServer(rainbowUID, requiredGoldenPets)
     end)
 end
-
+-- [END] Box MakeRainbow
 
 -- [START] Box UpdatePotion: khung trống chờ bổ sung logic
 -- Chưa triển khai UpdatePotion.
