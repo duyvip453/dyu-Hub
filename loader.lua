@@ -148,17 +148,13 @@ local Tab1 = Window:CreateTab({
 task.spawn(function()
     task.wait(1)
 
-    local Library = ReplicatedStorage:WaitForChild("Library")
-    local Client = Library:WaitForChild("Client")
-    local TabController = require(Client:WaitForChild("TabController"))
-
-    local PlayerGui = Player:WaitForChild("PlayerGui")
-    local Machines = PlayerGui:WaitForChild("_MACHINES")
-    local machine = Machines:WaitForChild("EggSlotsMachine")
+    local RS = game:GetService("ReplicatedStorage")
+    local gui = Player.PlayerGui._MACHINES.EggSlotsMachine
+    local TabController = require(RS.Library.Client.TabController)
 
     TabController.OpenTab("EggSlotsMachine")
-    task.wait(0.2)
-    machine.Enabled = false
+    task.wait()
+    gui.Enabled = false
 end)
 -- [END] Cập nhật Egg Slots một lần khi loader khởi động
 
