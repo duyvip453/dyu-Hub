@@ -969,11 +969,33 @@ end
 -- end
 -- [END] Box UpdatePotion
 
--- [START] Box UpdateEnchant: khung trống chờ bổ sung logic
--- Chưa triển khai UpdateEnchant.
--- QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
---     -- Bổ sung sau khi xác minh ID và quy trình nâng cấp.
--- end
+-- [START] Box UpdateEnchant: chọn ngẫu nhiên ID enchant rồi gọi máy nâng cấp
+QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
+    local entries = EnchantUpgradeIDs.Entries or {}
+    local usableEntries = {}
+    for _, entry in ipairs(entries) do
+        if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+            table.insert(usableEntries, entry)
+        end
+    end
+    if #usableEntries == 0 then return end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then return end
+
+    while isEnabled() do
+        local entry = usableEntries[math.random(1, #usableEntries)]
+        if not isEnabled() then break end
+        pcall(function()
+            remote:InvokeServer(entry.Id, 1)
+        end)
+        task.wait(1)
+    end
+end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
 
