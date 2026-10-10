@@ -930,3 +930,36 @@ end
 -- end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
+
+-- [START] Toggle test cô lập: Update Potion một ID, amount = 1
+Tab1:CreateToggle({
+    Name = "TEST - Update Potion (1 ID)",
+    CurrentValue = false,
+    Callback = function(Value)
+        if not Value then return end
+
+        task.spawn(function()
+            local entries = PotionUpgradeIDs.Entries or {}
+            local validEntries = {}
+
+            for _, entry in ipairs(entries) do
+                if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+                    table.insert(validEntries, entry)
+                end
+            end
+
+            if #validEntries == 0 then return end
+
+            local selected = validEntries[math.random(1, #validEntries)]
+            local network = ReplicatedStorage:WaitForChild("Network")
+            local remote = network:WaitForChild(PotionUpgradeIDs.MachineRemote or "UpgradePotionsMachine_Activate")
+            if remote:IsA("RemoteFunction") then
+                pcall(function()
+                    remote:InvokeServer(selected.Id, 1)
+                end)
+            end
+        end)
+    end
+})
+-- [END] Toggle test cô lập: Update Potion một ID, amount = 1
+
