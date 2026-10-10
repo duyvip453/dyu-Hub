@@ -964,9 +964,9 @@ QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     task.wait(0.5)
     if not isEnabled() then return end
 
-    -- Sau 0,5 giây, craft Rainbow với số lượng Golden cần dùng.
+    -- Sau 0,5 giây, craft đúng số lượng Rainbow mà quest yêu cầu.
     pcall(function()
-        rainbowRemote:InvokeServer(rainbowUID, requiredGoldenPets)
+        rainbowRemote:InvokeServer(rainbowUID, requested)
     end)
 end
 -- [END] Box MakeRainbow
