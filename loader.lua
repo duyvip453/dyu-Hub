@@ -698,9 +698,9 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
         local entry = usableEntries[math.random(1, #usableEntries)]
         if not isEnabled() then break end
         pcall(function()
-            remote:InvokeServer(entry.Id)
+            remote:InvokeServer(entry.Id, 1)
         end)
-        task.wait(0.75)
+        task.wait(1)
     end
 end
 -- [END] Box CollectPotions
