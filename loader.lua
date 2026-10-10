@@ -894,7 +894,7 @@ end
 -- end
 -- [END] Box InventoryItems
 
--- [START] Box MakeGolden: mở Gold Machine, craft đúng số lượng nhiệm vụ rồi đóng máy
+-- [START] Box MakeGolden: gọi thẳng remote, không cần mở Gold Machine
 QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
@@ -905,34 +905,14 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not requested or requested < 1 then return end
     requested = math.floor(requested)
 
-    local RS = game:GetService("ReplicatedStorage")
-    local Library = RS:WaitForChild("Library")
-    local GUI = require(Library.Client.GUI)
-    local TabController = require(Library.Client.TabController)
     local targetUID = "f69b09dd148145e19181cbb9d7ff31a1"
-
-    local opened = pcall(function()
-        GUI.GoldMachine()
-        TabController.OpenTab("GoldMachine")
-    end)
-    if not opened then return end
-
-    task.wait(0.3)
-    if not isEnabled() then
-        pcall(function() TabController.CloseTab("GoldMachine") end)
-        return
-    end
-
-    local network = RS:FindFirstChild("Network")
+    local network = ReplicatedStorage:FindFirstChild("Network")
     local remote = network and network:FindFirstChild("GoldMachine_Activate")
-    if remote and remote:IsA("RemoteFunction") and isEnabled() then
-        pcall(function()
-            remote:InvokeServer(targetUID, requested)
-        end)
-    end
+    if not remote or not remote:IsA("RemoteFunction") or not isEnabled() then return end
 
-    task.wait(0.1)
-    pcall(function() TabController.CloseTab("GoldMachine") end)
+    pcall(function()
+        remote:InvokeServer(targetUID, requested)
+    end)
 end
 -- [END] Box MakeGolden
 
