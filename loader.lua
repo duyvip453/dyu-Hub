@@ -1013,84 +1013,148 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
 end
 -- [END] Box MakeGolden
 
--- [START] Box MakeRainbow: chỉ xử lý nhiệm vụ có key "rainbow"
--- Rainbow cần tạo Golden trung gian trước rồi mới gọi Rainbow machine.
+-- [START] Box MakeRainbow: kiểm tra Rainbow trước; nếu thiếu thì craft Golden trung gian
 QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
+
     local title = string.lower(tostring(questTitle or ""))
     if not title:find("rainbow", 1, true) then return end
 
     local requested = tonumber((title:gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then return end
     requested = math.floor(requested)
-    local requiredNormalPets = requested * 100
+
+    local RS = game:GetService("ReplicatedStorage")
+    local Library = RS:WaitForChild("Library")
+    local GUI = require(Library.Client.GUI)
+    local TabController = require(Library.Client.TabController)
+    local playerGui = Player:WaitForChild("PlayerGui")
+    local rainbowUID = "192c592642a445c8963250710c12bf69"
+    local goldenUID = "f69b09dd148145e19181cbb9d7ff31a1"
     local requiredGoldenPets = requested * 10
 
-    local function GetGoldMachineQuantity()
-        local playerGui = Player:FindFirstChild("PlayerGui")
-        local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
-        local machine = machines and machines:FindFirstChild("GoldMachine")
+    local function ReadItemUID(slot)
+        local properties = slot:FindFirstChild("Properties")
+        if properties then
+            local uidObject = properties:FindFirstChild("itemUID") or properties:FindFirstChild("ItemUID")
+            if uidObject and (uidObject:IsA("StringValue") or uidObject:IsA("TextLabel")) then
+                return tostring(uidObject.Value or uidObject.Text)
+            end
+            local uidAttribute = properties:GetAttribute("itemUID") or properties:GetAttribute("ItemUID")
+            if uidAttribute ~= nil then return tostring(uidAttribute) end
+        end
+
+        local uidAttribute = slot:GetAttribute("itemUID") or slot:GetAttribute("ItemUID")
+        if uidAttribute ~= nil then return tostring(uidAttribute) end
+        local uidObject = slot:FindFirstChild("itemUID") or slot:FindFirstChild("ItemUID")
+        if uidObject and (uidObject:IsA("StringValue") or uidObject:IsA("TextLabel")) then
+            return tostring(uidObject.Value or uidObject.Text)
+        end
+        return nil
+    end
+
+    local function ReadQuantity(slot)
+        local quantity = slot:FindFirstChild("Quantity", true)
+        if not quantity or not (quantity:IsA("TextLabel") or quantity:IsA("TextButton")) then
+            return nil
+        end
+        local raw = tostring(quantity.Text or ""):gsub(",", ""):gsub("%s+", "")
+        local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
+        number = tonumber(number)
+        if number then
+            local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
+            return math.floor(number * multiplier)
+        end
+        return tonumber(raw:match("(%d+)"))
+    end
+
+    local function GetMachineQuantity(machineName, targetUID)
+        local machines = playerGui:FindFirstChild("_MACHINES")
+        local machine = machines and machines:FindFirstChild(machineName)
         local frame = machine and machine:FindFirstChild("Frame")
         local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
         local items = itemsFrame and itemsFrame:FindFirstChild("Items")
-        local pets = items and items:FindFirstChild("Pets")
-        if not pets then return nil end
-        local slots = {}
-        if pets.Name == "ItemSlot" then table.insert(slots, pets) end
-        for _, object in ipairs(pets:GetDescendants()) do
-            if object.Name == "ItemSlot" then table.insert(slots, object) end
-        end
-        for _, slot in ipairs(slots) do
-            local quantity = slot:FindFirstChild("Quantity")
-            if quantity and quantity:IsA("TextLabel") then
-                local raw = quantity.Text:gsub(",", ""):gsub("%s+", "")
-                local number, suffix = raw:match("^(%d+%.?%d*)([kKmMbB]?)$")
-                number = tonumber(number)
-                if number then
-                    local multiplier = ({k=1e3,m=1e6,b=1e9})[string.lower(suffix or "")] or 1
-                    return math.floor(number * multiplier)
-                end
-                local digits = tonumber(raw:match("(%d+)"))
-                if digits then return digits end
+        if not items then return nil end
+
+        for _, object in ipairs(items:GetDescendants()) do
+            if object.Name == "ItemSlot" and ReadItemUID(object) == targetUID then
+                local quantity = ReadQuantity(object)
+                if quantity ~= nil then return quantity end
             end
         end
         return nil
     end
 
-    local quantity = GetGoldMachineQuantity()
-    if not quantity then return end
-    if quantity < requiredNormalPets then
-        local hatched = RunQuestEggHatch(
-            "Hollow Egg",
-            Vector3.new(-15044.67, 16.34, 2147.03),
-            questTitle,
-            isEnabled,
-            function()
-                local current = GetGoldMachineQuantity()
-                return current ~= nil and current >= requiredNormalPets
-            end
-        )
-        if not hatched then return end
+    local function OpenMachine(machineName, openGui)
+        local ok = pcall(function()
+            openGui()
+            TabController.OpenTab(machineName)
+        end)
+        if not ok then return false end
+        task.wait(0.3)
+        return isEnabled()
     end
-    if not isEnabled() then return end
-    quantity = GetGoldMachineQuantity()
-    if not quantity or quantity < requiredNormalPets then return end
 
-    local network = ReplicatedStorage:FindFirstChild("Network")
-    local goldRemote = network and network:FindFirstChild("GoldMachine_Activate")
-    if not goldRemote or not goldRemote:IsA("RemoteFunction") then return end
-    local goldOk = pcall(function()
-        goldRemote:InvokeServer("f69b09dd148145e19181cbb9d7ff31a1", requiredNormalPets)
-    end)
-    if not goldOk or not isEnabled() then return end
+    local function CloseMachine(machineName)
+        pcall(function() TabController.CloseTab(machineName) end)
+    end
 
-    task.wait(1)
+    local function Craft(machineName, targetUID, amount)
+        if not isEnabled() then return false end
+        local network = RS:FindFirstChild("Network")
+        local remoteName = machineName .. "_Activate"
+        local remote = network and network:FindFirstChild(remoteName)
+        if not remote or not remote:IsA("RemoteFunction") then return false end
+        local ok = pcall(function()
+            remote:InvokeServer(targetUID, amount)
+        end)
+        return ok
+    end
+
+    -- Mở Rainbow Machine và kiểm tra số lượng Rainbow hiện có.
+    if not OpenMachine("RainbowMachine", function() GUI.RainbowMachine() end) then
+        CloseMachine("RainbowMachine")
+        return
+    end
+
+    local rainbowQuantity = GetMachineQuantity("RainbowMachine", rainbowUID)
+    if rainbowQuantity ~= nil and rainbowQuantity / 10 >= requested then
+        Craft("RainbowMachine", rainbowUID, requiredGoldenPets)
+        task.wait(0.1)
+        CloseMachine("RainbowMachine")
+        return
+    end
+
+    -- Rainbow chưa đủ: chuyển sang Gold Machine để craft requested * 10 Golden.
+    CloseMachine("RainbowMachine")
     if not isEnabled() then return end
-    local rainbowRemote = network:FindFirstChild("RainbowMachine_Activate")
-    if not rainbowRemote or not rainbowRemote:IsA("RemoteFunction") then return end
-    pcall(function()
-        rainbowRemote:InvokeServer("192c592642a445c8963250710c12bf69", requiredGoldenPets)
-    end)
+
+    if not OpenMachine("GoldMachine", function() GUI.GoldMachine() end) then
+        CloseMachine("GoldMachine")
+        return
+    end
+
+    if not isEnabled() then
+        CloseMachine("GoldMachine")
+        return
+    end
+
+    local goldCrafted = Craft("GoldMachine", goldenUID, requiredGoldenPets)
+    task.wait(0.1)
+    CloseMachine("GoldMachine")
+    if not goldCrafted or not isEnabled() then return end
+
+    -- Sau khi craft Golden, mở lại Rainbow Machine, craft Rainbow rồi đóng máy.
+    if not OpenMachine("RainbowMachine", function() GUI.RainbowMachine() end) then
+        CloseMachine("RainbowMachine")
+        return
+    end
+
+    if isEnabled() then
+        Craft("RainbowMachine", rainbowUID, requiredGoldenPets)
+    end
+    task.wait(0.1)
+    CloseMachine("RainbowMachine")
 end
 -- [END] Box MakeRainbow
 
