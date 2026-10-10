@@ -708,7 +708,7 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
         pcall(function()
             remote:InvokeServer(entry.Id, 1)
         end)
-        task.wait(1)
+        task.wait(0.5)
     end
 end
 -- [END] Box CollectPotions
