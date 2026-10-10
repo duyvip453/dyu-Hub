@@ -913,21 +913,22 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
         local itemsFrame = frame and frame:FindFirstChild("ItemsFrame")
         local items = itemsFrame and itemsFrame:FindFirstChild("Items")
         local pets = items and items:FindFirstChild("Pets")
-        local slot = pets and pets:FindFirstChild("ItemSlot")
-        local icon = slot and slot:FindFirstChild("Icon")
-        local quantityLabel = slot and slot:FindFirstChild("Quantity")
+        if not pets then return nil end
 
-        if not icon or not quantityLabel or not quantityLabel:IsA("TextLabel") then
-            return nil
+        -- Mỗi ItemSlot có Icon và Quantity riêng; chỉ đọc Quantity thuộc slot có đúng Image.
+        for _, slot in ipairs(pets:GetChildren()) do
+            local icon = slot:FindFirstChild("Icon")
+            local quantityLabel = slot:FindFirstChild("Quantity")
+            if icon and icon:IsA("ImageLabel") and icon.Image == "rbxassetid://76025459852090"
+                and quantityLabel and quantityLabel:IsA("TextLabel") then
+                local raw = quantityLabel.Text:gsub(",", ""):gsub("%s+", "")
+                local amount = tonumber(raw:match("(%d+%.?%d*)"))
+                if amount then
+                    return math.floor(amount)
+                end
+            end
         end
-        if icon.Image ~= "rbxassetid://76025459852090" then
-            return nil
-        end
-
-        local raw = quantityLabel.Text:gsub(",", ""):gsub("%s+", "")
-        local amount = tonumber(raw:match("(%d+%.?%d*)"))
-        if not amount then return nil end
-        return math.floor(amount)
+        return nil
     end
 
     -- Mỗi Golden cần 10 pet thường: chỉ bắt đầu craft khi số pet thường đủ.
