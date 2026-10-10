@@ -81,34 +81,46 @@ local EventTab = Window:CreateTab({
 
 -- [END] Tải module giao diện và tạo cửa sổ/tab chính
 
--- [START] Auto HW Boss Tap: toggle và vòng lặp thử nghiệm cục bộ
+-- [START] Auto HW Boss Tap: gửi HW_Boss_Tap / circle mỗi 0.1 giây
 EventTab:CreateSection("Event")
 EventTab:CreateLabel({
-    Text = "Bật/tắt vòng lặp thử nghiệm cục bộ; không gửi RemoteEvent.",
+    Text = "Tự động gọi HW_Boss_Tap với tham số circle khi bật.",
     Style = 1
 })
 EventTab:CreateSection("Hatch War")
 
 local AutoTapRunning = false
-local AutoTapTicks = 0
+local FireCustomRemote = nil
 
--- Hàm xử lý thử nghiệm cục bộ. Thay phần thân bằng logic an toàn trong môi trường bạn sở hữu.
-local function HandleAutoTapTestTick()
-    AutoTapTicks += 1
+local function GetFireCustomRemote()
+    if FireCustomRemote and FireCustomRemote.Parent then
+        return FireCustomRemote
+    end
+
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local network = replicatedStorage:WaitForChild("Network")
+    FireCustomRemote = network:WaitForChild("Instancing_FireCustomFromClient")
+    return FireCustomRemote
 end
 
-local function StartAutoTapTest()
+local function StartAutoHWTap()
     if AutoTapRunning then return end
     AutoTapRunning = true
 
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            local ok, err = pcall(HandleAutoTapTestTick)
+            local ok, err = pcall(function()
+                local remote = GetFireCustomRemote()
+                remote:FireServer("HatchWar", "HW_Boss_Tap", "circle")
+            end)
+
             if not ok then
-                warn("[DYU HUB / EVENT] Auto HW Boss Tap test error:", err)
+                warn("[DYU HUB / EVENT] Auto HW Boss Tap error:", err)
             end
+
             task.wait(0.1)
         end
+
         AutoTapRunning = false
     end)
 end
@@ -121,12 +133,18 @@ EventTab:CreateToggle({
         SaveConfig()
 
         if Value then
-            print("[DYU HUB / EVENT] Auto HW Boss Tap test: ON")
-            StartAutoTapTest()
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: ON")
+            StartAutoHWTap()
         else
             AutoTapRunning = false
-            print("[DYU HUB / EVENT] Auto HW Boss Tap test: OFF")
+            print("[DYU HUB / EVENT] Auto HW Boss Tap: OFF")
         end
     end
 })
--- [END] Auto HW Boss Tap: toggle và vòng lặp thử nghiệm cục bộ
+
+-- Nếu config đã lưu trạng thái ON từ lần trước, tiếp tục vòng lặp sau khi tạo toggle.
+if EventSettings.AutoHatchWarBossTap then
+    StartAutoHWTap()
+end
+-- [END] Auto HW Boss Tap: gửi HW_Boss_Tap / circle mỗi 0.1 giây
+
