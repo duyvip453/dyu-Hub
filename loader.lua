@@ -455,7 +455,7 @@ end
 local QuestMatchRules = {
     -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
     {Group = "UpdatePotion", Keywords = {"upgrade", "potion"}, MatchAll = true},
-    {Group = "UpdateEnchant", Keywords = {"upgrade", "enchants"}, MatchAll = true},
+    {Group = "UpdateEnchant", Keywords = {"upgrade", "enchant"}, MatchAll = true},
     -- MakePet is routed to its group; the handler distinguishes Golden from Rainbow.
     {Group = "MakePet", KeepNumbers = true, Keywords = {"make"}},
     -- ROUTING GUARD: LegendaryEggs and Eggs are distinct Groups despite sharing "hatch".
@@ -465,7 +465,7 @@ local QuestMatchRules = {
     {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"Legendary"}},
     {Group = "InventoryItems", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
-    {Group = "CollectEnchants", Keywords = {"collect", "enchants"}, MatchAll = true},
+    {Group = "CollectEnchants", Keywords = {"collect", "enchant"}, MatchAll = true},
     -- Các từ khóa trong AnyKeywords là lựa chọn thay thế nhau (OR), không phải bắt buộc xuất hiện cùng lúc.
     {Group = "BestAreaEvent", AnyKeywords = {"comets", "coin jars", "lucky blocks", "piñatas", "pinatas"}},
     {Group = "BestArea", AnyKeywords = {"best area", "breakables", "mini-chests", "mini-chest", "superior mini-chest", "mini chest", "diamond", "diamonds", "earn"}}
