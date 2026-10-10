@@ -631,30 +631,32 @@ end
 local function ScanAndSortQuestRanks()
     local found = {}
 
-    -- Quét đúng một vòng theo thứ tự cố định; rank chỉ để hiển thị, không quyết định ưu tiên.
+    -- Quét đúng một vòng qua path của cả bốn rank.
     for scanOrder, rank in ipairs(RankScanOrder) do
         local path = QuestRankPaths[rank]
         local ok, title, progress = pcall(GetQuestInfoFromPath, path)
         if ok and title and title ~= "" and progress and not IsQuestProgressComplete(progress) then
             local group = IdentifyQuestGroup(title)
-            if group and QuestGroupPriority[group] then
+            local priority = group and QuestGroupPriority[group]
+            if group and priority then
                 table.insert(found, {
                     Rank = rank,
                     Title = title,
                     Group = group,
-                    Priority = QuestGroupPriority[group],
+                    Priority = priority,
                     ScanOrder = scanOrder
                 })
             end
         end
     end
 
-    -- Chỉ Group quyết định nhiệm vụ nào làm trước.
-    -- Nếu nhiều rank có cùng Group ưu tiên, giữ thứ tự quét ổn định; không xếp theo độ khó của rank.
+    -- Ưu tiên tuyệt đối theo danh sách Group người dùng cung cấp (1 là cao nhất).
+    -- Rank chỉ là thông tin hiển thị, không ảnh hưởng thứ tự sắp xếp.
     table.sort(found, function(a, b)
         if a.Priority ~= b.Priority then
             return a.Priority < b.Priority
         end
+        -- Nếu cùng Group, giữ thứ tự quét ổn định để tránh thứ tự ngẫu nhiên.
         return a.ScanOrder < b.ScanOrder
     end)
 
