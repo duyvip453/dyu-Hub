@@ -901,7 +901,7 @@ end
 -- [END] Box Eggs
 
 -- [START] Box Use: dùng potion có FromTier khớp Tier La Mã trong quest
-QuestScriptBoxes["Use"] = function(questTitle, rank, isEnabled)
+QuestScriptBoxes.Use = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
     -- Đọc Tier La Mã từ tiêu đề, ví dụ: "Use Tier IV Potion".
