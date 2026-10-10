@@ -6,7 +6,7 @@ if not sourceOk or type(sourceCode) ~= "string" or sourceCode == "" then
     return nil
 end
 sourceCode = sourceCode:gsub(
-    'LoadingFrame%%.Version%%.Text = LoadingFrame%%.Frame%%.Frame%%.Title%%.Text == "Luna Interface Suite" and Release or "Luna UI"',
+    'LoadingFrame%%.Version%%.Text = LoadingFrame%%.Frame%%.Frame%%.Title%%.Text == "Luna Interface Suite" and Release or "yzumi UI"',
     'LoadingFrame.Version.Visible = false'
 )
 
@@ -25,9 +25,9 @@ function UIModule:Init()
 local Window = Luna:CreateWindow({
 	Name = "DYU HUB", -- This Is Title Of Your Window
 	Subtitle = nil, -- A Gray Subtitle next To the main title.
-	LogoID = "86628632168323", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
+	LogoID = "15771263462", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
 	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
-	LoadingTitle = "DYU HUB", -- Header for loading screen
+	LoadingTitle = "duy cute", -- Header for loading screen
 	LoadingSubtitle = "by duy duy", -- Subtitle for loading screen
 
 	ConfigSettings = {
