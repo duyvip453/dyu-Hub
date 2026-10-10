@@ -589,8 +589,92 @@ local function SetQuestRankEnabled(rank, value)
     SaveConfig()
 end
 
--- [AUTO FARM RANK TOGGLE]
--- Toggle giao diện duy nhất; logic ưu tiên rank/nhiệm vụ sẽ được chốt riêng sau.
+-- [AUTO FARM RANK TOGGLE + BẢNG ƯU TIÊN]
+-- Giai đoạn này chỉ quét một vòng và sắp xếp danh sách; chưa gọi các ScriptBox.
+local QuestGroupPriority = {
+    Use = 1,
+    CollectPotions = 2,
+    CollectEnchants = 3,
+    UpdatePotion = 4,
+    UpdateEnchant = 5,
+    LegendaryEggs = 6,
+    Eggs = 7,
+    MakeGolden = 8,
+    MakeRainbow = 9,
+    BestAreaComet = 10,
+    BestAreaLuckyBlock = 11,
+    BestAreaPinata = 12,
+    BestAreaCoinJar = 13,
+    BestArea = 14
+}
+local RankOrder = {Easy = 1, Medium = 2, Hard = 3, Extreme = 4}
+local RankDisplayName = {
+    Easy = "Easy",
+    Medium = "Medium",
+    Hard = "Hard",
+    Extreme = "Extreme"
+}
+
+-- Bốn dòng để trống cho đến khi bật Auto Farm Rank.
+Tab1:CreateSection("Bảng ưu tiên nhiệm vụ")
+local PriorityLabels = {}
+for index = 1, 4 do
+    PriorityLabels[index] = Tab1:CreateLabel({Text = "", Style = 1})
+end
+
+local function ClearPriorityTable()
+    for index = 1, 4 do
+        PriorityLabels[index]:Set("")
+    end
+end
+
+local function ScanAndSortQuestRanks()
+    local found = {}
+
+    -- Chỉ đọc tên nhiệm vụ/group một vòng từ path của từng rank.
+    for rank, path in pairs(QuestRankPaths) do
+        local ok, title, progress = pcall(GetQuestInfoFromPath, path)
+        if ok and title and title ~= "" and progress and not IsQuestProgressComplete(progress) then
+            local group = IdentifyQuestGroup(title)
+            if group and QuestGroupPriority[group] then
+                table.insert(found, {
+                    Rank = rank,
+                    Title = title,
+                    Group = group,
+                    Priority = QuestGroupPriority[group],
+                    RankOrder = RankOrder[rank] or 99
+                })
+            end
+        end
+    end
+
+    -- Extreme (rank khó nhất) luôn nằm ở dòng 4.
+    -- Ba rank còn lại xếp theo độ ưu tiên Group; nếu bằng nhau thì rank dễ hơn đứng trước.
+    table.sort(found, function(a, b)
+        local aExtreme = a.Rank == "Extreme"
+        local bExtreme = b.Rank == "Extreme"
+        if aExtreme ~= bExtreme then
+            return not aExtreme
+        end
+        if a.Priority ~= b.Priority then
+            return a.Priority < b.Priority
+        end
+        return a.RankOrder < b.RankOrder
+    end)
+
+    ClearPriorityTable()
+    for index = 1, math.min(4, #found) do
+        local item = found[index]
+        PriorityLabels[index]:Set(string.format(
+            "%d. [%s] %s | %s",
+            index,
+            RankDisplayName[item.Rank] or item.Rank,
+            item.Group,
+            item.Title
+        ))
+    end
+end
+
 Tab1:CreateToggle({
     Name = "Auto Farm Rank",
     CurrentValue = Settings.AutoQuestRank,
@@ -600,50 +684,17 @@ Tab1:CreateToggle({
             SetQuestRankEnabled(rank, Value)
         end
         SaveConfig()
+
+        if Value then
+            ScanAndSortQuestRanks()
+        else
+            ClearPriorityTable()
+        end
     end
 })
 
-task.spawn(function()
-    while task.wait(0.5) do
-        for rank, path in pairs(QuestRankPaths) do
-            local state = QuestRankState[rank]
-            if state and IsQuestRankEnabled(rank) then
-                local ok, title, progress = pcall(GetQuestInfoFromPath, path)
-                if ok and title and title ~= "" and progress then
-                    local complete = IsQuestProgressComplete(progress)
-                    local now = os.clock()
-
-                    if state.ActiveQuest and (complete or title ~= state.ActiveQuest) then
-                        -- Completion may be observed as full progress or as the next title appearing first.
-                        state.CompletedQuest = state.ActiveQuest
-                        state.ActiveQuest = nil
-                        state.ActiveGroup = nil
-                        state.Running = false
-                        state.Generation = state.Generation + 1
-                        state.CompleteWaitUntil = now + 1.5
-                    elseif state.CompletedQuest and title ~= state.CompletedQuest then
-                        state.CompletedQuest = nil
-                    elseif state.CompletedQuest == title and not complete then
-                        -- Same quest title with reset progress means a fresh task instance.
-                        state.CompletedQuest = nil
-                    end
-
-                    if now >= state.CompleteWaitUntil and not state.ActiveQuest and not state.Running then
-                        if state.CompletedQuest ~= title and not complete then
-                            local group = IdentifyQuestGroup(title)
-                            if group then
-                                DispatchQuest(rank, title, group)
-                            end
-                        elseif state.CompletedQuest ~= title and complete then
-                            -- The quest UI may already show a completed task while transitioning.
-                            state.CompleteWaitUntil = now + 1.5
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
+-- Chưa dispatch nhiệm vụ ở giai đoạn này. Bật toggle chỉ quét một vòng và cập nhật bảng.
+-- Logic gọi nhiệm vụ, chờ hoàn thành và quét lại sẽ được bổ sung ở bước tiếp theo.
 
 -- [END] Auto Farm Quest: bộ quét tiến độ và điều phối nhiệm vụ
 
