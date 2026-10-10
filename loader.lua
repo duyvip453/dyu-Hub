@@ -664,10 +664,8 @@ local function ScanAndSortQuestRanks()
     for index = 1, math.min(4, #found) do
         local item = found[index]
         PriorityLabels[index]:Set(string.format(
-            "%d. [%s] %s | %s",
+            "%d. %s",
             index,
-            RankDisplayName[item.Rank] or item.Rank,
-            item.Group,
             item.Title
         ))
     end
