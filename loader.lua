@@ -900,12 +900,62 @@ QuestScriptBoxes.Eggs = function(questTitle, rank, isEnabled)
 end
 -- [END] Box Eggs
 
--- [START] Box Use: khung chờ bổ sung logic sử dụng vật phẩm
+-- [START] Box Use: dùng potion có FromTier khớp Tier La Mã trong quest
 QuestScriptBoxes["Use"] = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
-    -- TODO: Thêm logic xử lý nhiệm vụ "Use" tại đây.
-    -- Các vòng lặp dài cần kiểm tra isEnabled() và return khi nhiệm vụ dừng.
+    -- Đọc Tier La Mã từ tiêu đề, ví dụ: "Use Tier IV Potion".
+    local title = string.lower(tostring(questTitle or ""))
+    local romanTiers = {
+        ["i"] = 1,
+        ["ii"] = 2,
+        ["iii"] = 3,
+        ["iv"] = 4,
+        ["v"] = 5,
+        ["vi"] = 6
+    }
+
+    local tierText = title:match("tier%s+([ivx]+)")
+    local requestedTier = tierText and romanTiers[tierText]
+    if not requestedTier then return end
+
+    -- Chọn các potion có FromTier đúng bằng tier nhiệm vụ yêu cầu.
+    local entries = PotionUpgradeIDs and PotionUpgradeIDs.Entries
+    if type(entries) ~= "table" then return end
+
+    local matchingEntries = {}
+    for _, entry in ipairs(entries) do
+        if type(entry) == "table"
+            and tonumber(entry.FromTier) == requestedTier
+            and type(entry.Id) == "string"
+            and entry.Id ~= "" then
+            table.insert(matchingEntries, entry)
+        end
+    end
+    if #matchingEntries == 0 then return end
+
+    local network = ReplicatedStorage:FindFirstChild("Network")
+    local remote = network and network:FindFirstChild("Potions: Consume")
+    if not remote or not remote:IsA("RemoteEvent") then return end
+
+    local questPath = QuestRankPaths[rank]
+    if not questPath then return end
+
+    while isEnabled() do
+        -- Chỉ theo dõi quest được giao cho đúng rank này.
+        local currentTitle, currentProgress = GetQuestInfoFromPath(questPath)
+        if not currentTitle or currentTitle ~= questTitle then return end
+        if IsQuestProgressComplete(currentProgress) then return end
+        if not isEnabled() then return end
+
+        -- Có thể dùng bất kỳ potion nào ở FromTier tương ứng; chọn ngẫu nhiên.
+        local entry = matchingEntries[math.random(1, #matchingEntries)]
+        pcall(function()
+            remote:FireServer(entry.Id, 1)
+        end)
+
+        task.wait(0.5)
+    end
 end
 -- [END] Box Use
 
