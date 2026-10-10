@@ -81,27 +81,15 @@ local EventTab = Window:CreateTab({
 
 -- [END] Tải module giao diện và tạo cửa sổ/tab chính
 
--- [START] Auto HW Boss Tap: gửi HW_Boss_Tap / circle mỗi 0.1 giây
+-- [START] Auto HW Boss Tap: Test 1 - kích hoạt LiveCircle.Activated bằng firesignal
 EventTab:CreateSection("Event")
 EventTab:CreateLabel({
-    Text = "Tự động gọi HW_Boss_Tap với tham số circle khi bật.",
+    Text = "Test 1: thử kích hoạt LiveCircle qua signal khi bật.",
     Style = 1
 })
 EventTab:CreateSection("Hatch War")
 
 local AutoTapRunning = false
-local FireCustomRemote = nil
-
-local function GetFireCustomRemote()
-    if FireCustomRemote and FireCustomRemote.Parent then
-        return FireCustomRemote
-    end
-
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-    local network = replicatedStorage:WaitForChild("Network")
-    FireCustomRemote = network:WaitForChild("Instancing_FireCustomFromClient")
-    return FireCustomRemote
-end
 
 local function StartAutoHWTap()
     if AutoTapRunning then return end
@@ -110,15 +98,27 @@ local function StartAutoHWTap()
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
             local ok, err = pcall(function()
-                local remote = GetFireCustomRemote()
-                remote:FireServer("HatchWar", "HW_Boss_Tap", "circle")
+                local player = game:GetService("Players").LocalPlayer
+                local playerGui = player:WaitForChild("PlayerGui")
+                local instances = playerGui:WaitForChild("_INSTANCES")
+                local hatchWarBoss = instances:WaitForChild("HatchWarBoss")
+                local button = hatchWarBoss:FindFirstChild("LiveCircle")
+
+                if button and button:IsA("ImageButton") and button.Visible then
+                    if type(firesignal) == "function" then
+                        firesignal(button.Activated)
+                    else
+                        warn("[DYU HUB / EVENT] Test 1 không hỗ trợ: firesignal không khả dụng trong executor.")
+                        AutoTapRunning = false
+                    end
+                end
             end)
 
             if not ok then
-                warn("[DYU HUB / EVENT] Auto HW Boss Tap error:", err)
+                warn("[DYU HUB / EVENT] Test 1 LiveCircle error:", err)
             end
 
-            task.wait(0.1)
+            task.wait(0.2)
         end
 
         AutoTapRunning = false
@@ -133,18 +133,17 @@ EventTab:CreateToggle({
         SaveConfig()
 
         if Value then
-            print("[DYU HUB / EVENT] Auto HW Boss Tap: ON")
+            print("[DYU HUB / EVENT] Test 1 LiveCircle Activated: ON")
             StartAutoHWTap()
         else
             AutoTapRunning = false
-            print("[DYU HUB / EVENT] Auto HW Boss Tap: OFF")
+            print("[DYU HUB / EVENT] Test 1 LiveCircle Activated: OFF")
         end
     end
 })
 
--- Nếu config đã lưu trạng thái ON từ lần trước, tiếp tục vòng lặp sau khi tạo toggle.
 if EventSettings.AutoHatchWarBossTap then
     StartAutoHWTap()
 end
--- [END] Auto HW Boss Tap: gửi HW_Boss_Tap / circle mỗi 0.1 giây
+-- [END] Auto HW Boss Tap: Test 1 - kích hoạt LiveCircle.Activated bằng firesignal
 
