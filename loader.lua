@@ -661,13 +661,13 @@ local function ScanAndSortQuestRanks()
     end)
 
     ClearPriorityTable()
-    for index = 1, math.min(4, #found) do
-        local item = found[index]
-        PriorityLabels[index]:Set(string.format(
-            "%d. %s",
-            index,
-            item.Title
-        ))
+    local displayOrder = 0
+    for _, item in ipairs(found) do
+        displayOrder = displayOrder + 1
+        if displayOrder > 4 then
+            break
+        end
+        PriorityLabels[displayOrder]:Set(string.format("%d. %s", displayOrder, item.Title))
     end
 end
 
