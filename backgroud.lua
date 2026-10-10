@@ -5,6 +5,11 @@ end)
 if not sourceOk or type(sourceCode) ~= "string" or sourceCode == "" then
     return nil
 end
+sourceCode = sourceCode:gsub(
+    'LoadingFrame%%.Version%%.Text = LoadingFrame%%.Frame%%.Frame%%.Title%%.Text == "Luna Interface Suite" and Release or "Luna UI"',
+    'LoadingFrame.Version.Visible = false'
+)
+
 local compileLuna = loadstring(sourceCode)
 if type(compileLuna) ~= "function" then
     return nil
