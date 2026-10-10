@@ -929,7 +929,7 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
         end)
     end
 
-    task.wait(0.25)
+    task.wait(0.1)
     TabController.CloseTab("GoldMachine")
 end
 -- [END] Box MakeGolden
