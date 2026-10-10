@@ -752,7 +752,7 @@ local function StartAutoFarmRankLoop()
         end
     end)
 end
--- Auto Farm Rank toggle: bật/tắt đồng bộ bốn rank và vòng điều phối duy nhất.
+-- Auto Farm Rank toggle: bật/tắt đồng bộ bốn rank và phân loại quest
 Tab1:CreateToggle({
     Name = "Auto Farm Rank",
     CurrentValue = Settings.AutoQuestRank,
@@ -766,7 +766,7 @@ Tab1:CreateToggle({
         if Value then
             StartAutoFarmRankLoop()
         else
-            -- Vô hiệu hóa vòng quét hiện tại và dừng box nào đang chạy.
+            -- scan check xem script nào chạy
             AutoFarmRankGeneration = AutoFarmRankGeneration + 1
             for _, rank in ipairs(RankScanOrder) do
                 StopDispatchedQuest(rank)
