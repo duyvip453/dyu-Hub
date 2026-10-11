@@ -145,20 +145,6 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 
--- [START] Cập nhật Egg Slots một lần khi loader khởi động
-task.spawn(function()
-    task.wait(1)
-
-    local RS = game:GetService("ReplicatedStorage")
-    local gui = Player.PlayerGui._MACHINES.EggSlotsMachine
-    local TabController = require(RS.Library.Client.TabController)
-
-    TabController.OpenTab("EggSlotsMachine")
-    task.wait()
-    gui.Enabled = false
-end)
--- [END] Cập nhật Egg Slots một lần khi loader khởi động
-
 -- [START] Hiển thị Rank và tiến độ nhiệm vụ
 --rank
 local CoreGui = game:GetService("CoreGui")
