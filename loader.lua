@@ -615,11 +615,19 @@ local RankDisplayName = {
     Extreme = "Extreme"
 }
 
--- Bốn dòng để trống cho đến khi bật Auto Farm Rank.
+-- Bốn dòng ưu tiên và một dòng chẩn đoán ngắn cho nhiệm vụ đang xử lý.
 Tab1:CreateSection("Bảng ưu tiên nhiệm vụ")
 local PriorityLabels = {}
 for index = 1, 4 do
     PriorityLabels[index] = Tab1:CreateLabel({Text = "", Style = 1})
+end
+local QuestDebugLabel = Tab1:CreateLabel({Text = "Auto Rank: idle", Style = 1})
+local function SetQuestDebug(text)
+    if QuestDebugLabel then
+        pcall(function()
+            QuestDebugLabel:Set("Auto Rank: " .. tostring(text))
+        end)
+    end
 end
 
 local function ClearPriorityTable()
@@ -872,10 +880,18 @@ end
 
 -- [START] Box CollectEnchants: dùng số lượng còn thiếu theo progress của quest
 QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
-    if not isEnabled() then return end
+    local state = QuestRankState[rank]
+    local function debug(message)
+        if state then state.LastHandlerStatus = tostring(message) end
+        SetQuestDebug(rank .. " / CollectEnchants / " .. tostring(message))
+    end
+
+    if not isEnabled() then debug("đã bị tắt trước khi chạy"); return end
 
     local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries
-    if type(entries) ~= "table" or #entries == 0 then return end
+    if type(entries) ~= "table" or #entries == 0 then
+        debug("registry enchant rỗng hoặc chưa tải"); return
+    end
 
     local usableEntries = {}
     for _, entry in ipairs(entries) do
@@ -883,34 +899,45 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
             table.insert(usableEntries, entry)
         end
     end
-    if #usableEntries == 0 then return end
+    if #usableEntries == 0 then debug("không có ID enchant hợp lệ"); return end
 
     local network = ReplicatedStorage:FindFirstChild("Network")
     local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
     local remote = network and network:FindFirstChild(remoteName)
-    if not remote or not remote:IsA("RemoteFunction") then return end
+    if not remote or not remote:IsA("RemoteFunction") then
+        debug("không tìm thấy RemoteFunction " .. tostring(remoteName)); return
+    end
 
     local questPath = QuestRankPaths[rank]
-    if not questPath then return end
+    if not questPath then debug("không có QuestRankPaths cho rank"); return end
 
+    local attempts, lastResult = 0, "chưa có response"
     while isEnabled() do
-        -- Chỉ tiếp tục nếu vẫn là nhiệm vụ Collect Enchants được giao.
         local currentTitle, progressText = GetQuestInfoFromPath(questPath)
-        if currentTitle ~= questTitle or not progressText then return end
+        if currentTitle ~= questTitle or not progressText then
+            debug("UI quest không khớp: " .. tostring(currentTitle) .. " / " .. tostring(progressText))
+            return
+        end
 
         local current, target = ParseQuestProgress(progressText)
-        if not current or not target or target <= 0 or current >= target then return end
+        if not current or not target or target <= 0 then
+            debug("không parse được progress: " .. tostring(progressText))
+            return
+        end
+        if current >= target then debug("quest hoàn thành " .. tostring(progressText)); return end
 
-        -- Nâng cấp từng enchant một, sau đó đọc lại progress trước request tiếp theo.
-        local entry = usableEntries[math.random(1, #usableEntries)]
+        local entry = usableEntries[((attempts) % #usableEntries) + 1]
         if not isEnabled() then return end
-        pcall(function()
-            remote:InvokeServer(entry.Id, 1)
+        attempts = attempts + 1
+        local ok, result = pcall(function()
+            return remote:InvokeServer(entry.Id, 1)
         end)
+        lastResult = ok and tostring(result) or ("remote error: " .. tostring(result))
+        debug(progressText .. " | request " .. tostring(attempts) .. " | " .. tostring(entry.Enchant or entry.Id) .. " | " .. lastResult)
 
-        -- Chừa thời gian cho server/UI cập nhật; vòng sau sẽ kiểm tra tiến độ mới.
-        task.wait(0.5)
+        task.wait(0.75)
     end
+    debug("handler đã bị tắt")
 end
 -- [END] Box CollectEnchants
 
