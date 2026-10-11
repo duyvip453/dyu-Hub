@@ -72,6 +72,54 @@ local EventTab = Window:CreateTab({
     ShowTitle = true
 })
 
+-- [START] BuyMax: tính tổng Egg Owned và cập nhật liên tục
+local CurrentMaxEggHatchAmount = 1
+
+local function RefreshMaxEggHatchAmount()
+    local playerGui = Player:FindFirstChild("PlayerGui")
+    local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
+    local eggSlotsMachine = machines and machines:FindFirstChild("EggSlotsMachine")
+    local frame = eggSlotsMachine and eggSlotsMachine:FindFirstChild("Frame")
+    local slots = frame and frame:FindFirstChild("Slots")
+    local items = slots and slots:FindFirstChild("Items")
+    local slotsSection = items and items:FindFirstChild("SlotsSection")
+    local slotsContainer = slotsSection and slotsSection:FindFirstChild("Slots")
+    if not slotsContainer then
+        return CurrentMaxEggHatchAmount
+    end
+
+    local totalEggs = 0
+    local foundOwnedSlot = false
+
+    for _, slot in ipairs(slotsContainer:GetDescendants()) do
+        if slot.Name == "OwnedSlot" then
+            local title = slot:FindFirstChild("Title", true)
+            if title and title:IsA("TextLabel") then
+                local amountText = tostring(title.Text or "")
+                local amount = tonumber(amountText:match("%+(%d+)%s*[Ee]gg"))
+                    or tonumber(amountText:match("%+(%d+)"))
+                if amount and amount > 0 then
+                    totalEggs = totalEggs + math.floor(amount)
+                    foundOwnedSlot = true
+                end
+            end
+        end
+    end
+
+    if foundOwnedSlot then
+        CurrentMaxEggHatchAmount = math.max(1, totalEggs)
+    end
+
+    return CurrentMaxEggHatchAmount
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        RefreshMaxEggHatchAmount()
+    end
+end)
+-- [END] BuyMax: tính tổng Egg Owned và cập nhật liên tục
+
 -- [START] Reset EggSlotsMachine BuyMax một lần khi khởi động
 task.spawn(function()
     task.wait(1)
