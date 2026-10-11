@@ -4,6 +4,7 @@ local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .
 
 local EventSettings = {
     AutoHatchWarBossTap = false,
+    AutoEgg = false,
 }
 
 local function SaveConfig()
@@ -135,6 +136,49 @@ task.spawn(function()
     gui.Enabled = false
 end)
 -- [END] Reset EggSlotsMachine BuyMax một lần khi khởi động
+
+-- [START] Auto Egg: gọi CustomEggs_Hatch với tổng Owned Egg đã quét
+local AutoEggRunning = false
+
+local function StartAutoEgg()
+    if AutoEggRunning then return end
+    AutoEggRunning = true
+
+    task.spawn(function()
+        local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+        local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
+
+        while EventSettings.AutoEgg and AutoEggRunning do
+            pcall(function()
+                local amount = RefreshMaxEggHatchAmount()
+                hatchRemote:InvokeServer("c63e54df863d449e934db74b66433996", amount)
+            end)
+            task.wait(0.5)
+        end
+
+        AutoEggRunning = false
+    end)
+end
+
+EventTab:CreateToggle({
+    Name = "Auto Egg",
+    CurrentValue = EventSettings.AutoEgg,
+    Callback = function(Value)
+        EventSettings.AutoEgg = Value
+        SaveConfig()
+
+        if Value then
+            StartAutoEgg()
+        else
+            AutoEggRunning = false
+        end
+    end
+})
+
+if EventSettings.AutoEgg then
+    StartAutoEgg()
+end
+-- [END] Auto Egg: gọi CustomEggs_Hatch với tổng Owned Egg đã quét
 -- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
