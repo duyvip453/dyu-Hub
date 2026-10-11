@@ -1287,3 +1287,138 @@ QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
 end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
+
+-- [START] TEST ĐỘC LẬP: CollectEnchants
+-- Chạy riêng, không phụ thuộc DispatchQuest / bảng ưu tiên / Auto Farm Rank.
+local TestCollectEnchantsEnabled = false
+local TestCollectEnchantsGeneration = 0
+
+local function RunCollectEnchantsIndependentTest()
+    TestCollectEnchantsGeneration = TestCollectEnchantsGeneration + 1
+    local generation = TestCollectEnchantsGeneration
+    TestCollectEnchantsEnabled = true
+
+    task.spawn(function()
+        local function isEnabled()
+            return TestCollectEnchantsEnabled and generation == TestCollectEnchantsGeneration
+        end
+
+        local rank, questTitle, questPath
+        for _, candidateRank in ipairs({"Easy", "Medium", "Hard", "Extreme"}) do
+            local candidatePath = QuestRankPaths[candidateRank]
+            local title, progress = GetQuestInfoFromPath(candidatePath)
+            local normalized = string.lower(tostring(title or ""))
+            if title and progress and normalized:find("collect", 1, true)
+                and normalized:find("enchant", 1, true)
+                and not IsQuestProgressComplete(progress) then
+                rank, questTitle, questPath = candidateRank, title, candidatePath
+                break
+            end
+        end
+
+        local function debug(message)
+            SetQuestDebug("TEST CollectEnchants / " .. tostring(rank or "no rank") .. " / " .. tostring(message))
+            print("[CollectEnchantsTest] " .. tostring(message))
+        end
+
+        if not isEnabled() then return end
+        if not rank then
+            debug("không tìm thấy quest Collect Enchants chưa hoàn thành ở Easy/Medium/Hard/Extreme")
+            TestCollectEnchantsEnabled = false
+            return
+        end
+
+        -- Bản test độc lập giữ nguyên logic kiểm tra registry, remote, progress,
+        -- chọn ID, InvokeServer và log của box CollectEnchants chính.
+        local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries
+        if type(entries) ~= "table" or #entries == 0 then
+            debug("registry enchant rỗng hoặc chưa tải")
+            TestCollectEnchantsEnabled = false
+            return
+        end
+
+        local usableEntries = {}
+        for _, entry in ipairs(entries) do
+            if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
+                table.insert(usableEntries, entry)
+            end
+        end
+        if #usableEntries == 0 then
+            debug("không có ID enchant hợp lệ")
+            TestCollectEnchantsEnabled = false
+            return
+        end
+
+        local network = ReplicatedStorage:FindFirstChild("Network")
+        local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
+        local remote = network and network:FindFirstChild(remoteName)
+        if not remote or not remote:IsA("RemoteFunction") then
+            debug("không tìm thấy RemoteFunction " .. tostring(remoteName))
+            TestCollectEnchantsEnabled = false
+            return
+        end
+
+        local attempts, lastResult = 0, "chưa có response"
+        debug("bắt đầu quest=" .. tostring(questTitle) .. " rank=" .. tostring(rank))
+        while isEnabled() do
+            local currentTitle, progressText = GetQuestInfoFromPath(questPath)
+            if currentTitle ~= questTitle or not progressText then
+                debug("UI quest không khớp: " .. tostring(currentTitle) .. " / " .. tostring(progressText))
+                break
+            end
+
+            local current, target = ParseQuestProgress(progressText)
+            if not current or not target or target <= 0 then
+                debug("không parse được progress: " .. tostring(progressText))
+                break
+            end
+            if current >= target then
+                debug("quest hoàn thành " .. tostring(progressText))
+                break
+            end
+
+            local entry = usableEntries[(attempts % #usableEntries) + 1]
+            if not isEnabled() then break end
+            attempts = attempts + 1
+            print(string.format(
+                "[CollectEnchantsTest] INVOKE quest=%s rank=%s enchant=%s id=%s amount=1 progress=%s",
+                tostring(questTitle),
+                tostring(rank),
+                tostring(entry.Enchant or "unknown"),
+                tostring(entry.Id),
+                tostring(progressText)
+            ))
+
+            local ok, result = pcall(function()
+                return remote:InvokeServer(entry.Id, 1)
+            end)
+            lastResult = ok and tostring(result) or ("remote error: " .. tostring(result))
+            print(string.format("[CollectEnchantsTest] RESULT ok=%s result=%s", tostring(ok), tostring(lastResult)))
+            debug(progressText .. " | request " .. tostring(attempts) .. " | " .. tostring(entry.Enchant or entry.Id) .. " | " .. lastResult)
+            task.wait(0.75)
+        end
+
+        if generation == TestCollectEnchantsGeneration then
+            TestCollectEnchantsEnabled = false
+            debug("test đã dừng")
+        end
+    end)
+end
+
+Tab1:CreateToggle({
+    Name = "TEST Collect Enchants (độc lập)",
+    CurrentValue = false,
+    Callback = function(value)
+        TestCollectEnchantsEnabled = value
+        TestCollectEnchantsGeneration = TestCollectEnchantsGeneration + 1
+        if value then
+            -- Hàm tự tạo generation riêng và không gọi DispatchQuest.
+            RunCollectEnchantsIndependentTest()
+        else
+            SetQuestDebug("TEST CollectEnchants / đã tắt")
+            print("[CollectEnchantsTest] STOP requested")
+        end
+    end
+})
+-- [END] TEST ĐỘC LẬP: CollectEnchants
+
