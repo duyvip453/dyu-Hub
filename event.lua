@@ -82,8 +82,7 @@ local EventTab = Window:CreateTab({
 -- [END] Tải module giao diện và tạo cửa sổ/tab chính
 
 -- [START] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
-EventTab:CreateSection("Hatch War")
-
+-- [START] Chỉ giữ toggle Auto HW Boss Tap
 local AutoTapRunning = false
 
 local function StartAutoHWTap()
