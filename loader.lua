@@ -1114,7 +1114,8 @@ end
 
 -- [START] Box MakeRainbow: thử Rainbow, kiểm tra quest, bổ sung Golden rồi lặp
 QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
-    local requested = tonumber((tostring(questTitle or ""):lower():gsub(",", "")):match("make%s+(%d+)"))
+    local title = tostring(questTitle or "")
+    local requested = tonumber((title:lower():gsub(",", "")):match("make%s+(%d+)"))
     if not requested or requested < 1 then return end
     requested = math.floor(requested)
 
@@ -1126,28 +1127,53 @@ QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     local goldenUID = "f69b09dd148145e19181cbb9d7ff31a1"
 
     if not questPath or not rainbowRemote or not rainbowRemote:IsA("RemoteFunction")
-        or not goldenRemote or not goldenRemote:IsA("RemoteFunction") then return end
+        or not goldenRemote or not goldenRemote:IsA("RemoteFunction") then
+        SetQuestDebug("MakeRainbow: thiếu quest path hoặc remote craft")
+        return
+    end
+
+    local function ReadQuestState()
+        local currentTitle, progress = GetQuestInfoFromPath(questPath)
+        if currentTitle ~= questTitle then
+            return "changed", currentTitle, progress
+        end
+        if progress and IsQuestProgressComplete(progress) then
+            return "complete", currentTitle, progress
+        end
+        -- Progress nil/chưa đọc được không có nghĩa quest đã xong hoặc đổi.
+        return "pending", currentTitle, progress
+    end
 
     while isEnabled() do
-        local currentTitle, progress = GetQuestInfoFromPath(questPath)
-        if currentTitle ~= questTitle or not progress or IsQuestProgressComplete(progress) then return end
+        local state = ReadQuestState()
+        if state == "changed" or state == "complete" then return end
 
-        -- 1. Thử craft đúng số Rainbow mà quest yêu cầu.
-        pcall(function()
-            rainbowRemote:InvokeServer(rainbowUID, requested)
+        -- Thử craft đúng số Rainbow mà quest yêu cầu.
+        local rainbowOk, rainbowResult = pcall(function()
+            return rainbowRemote:InvokeServer(rainbowUID, requested)
         end)
+        if not rainbowOk then
+            SetQuestDebug("MakeRainbow: Rainbow remote lỗi: " .. tostring(rainbowResult))
+        end
+
         task.wait(0.5)
         if not isEnabled() then return end
 
-        -- 2. Nếu quest chưa hoàn thành, craft Golden theo tỷ lệ 10:1.
-        currentTitle, progress = GetQuestInfoFromPath(questPath)
-        if currentTitle ~= questTitle or not progress or IsQuestProgressComplete(progress) then return end
+        -- Chỉ thoát khi quest đổi hoặc đã hoàn thành; thiếu Progress thì vẫn tiếp tục.
+        state = ReadQuestState()
+        if state == "changed" or state == "complete" then return end
 
-        pcall(function()
-            goldenRemote:InvokeServer(goldenUID, requested * 10)
+        -- Nếu vẫn chưa hoàn thành/Progress đang chờ cập nhật, thử tạo Golden theo tỷ lệ 10:1.
+        local goldenOk, goldenResult = pcall(function()
+            return goldenRemote:InvokeServer(goldenUID, requested * 10)
         end)
+        if not goldenOk then
+            SetQuestDebug("MakeRainbow: Golden remote lỗi: " .. tostring(goldenResult))
+        else
+            SetQuestDebug("MakeRainbow: đã gửi yêu cầu Golden x" .. tostring(requested * 10))
+        end
 
-        -- 3. Chờ Golden được xử lý rồi vòng lặp quay lại thử Rainbow.
+        -- Chờ Golden được xử lý rồi vòng lặp quay lại thử Rainbow.
         task.wait(1)
     end
 end
