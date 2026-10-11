@@ -5,6 +5,7 @@ local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .
 local EventSettings = {
     AutoHatchWarBossTap = false,
     AutoEgg = false,
+    AutoJump = false,
 }
 
 local function SaveConfig()
@@ -274,4 +275,46 @@ if EventSettings.AutoHatchWarBossTap then
     StartAutoHWTap()
 end
 -- [END] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
+
+-- [START] Auto Knock House: nhảy mỗi 5 phút
+local AutoJumpRunning = false
+
+local function StartAutoJump()
+    if AutoJumpRunning then return end
+    AutoJumpRunning = true
+
+    task.spawn(function()
+        while EventSettings.AutoJump and AutoJumpRunning do
+            pcall(function()
+                local character = Player.Character or Player.CharacterAdded:Wait()
+                local humanoid = character:WaitForChild("Humanoid")
+                humanoid.Jump = true
+            end)
+
+            task.wait(300)
+        end
+
+        AutoJumpRunning = false
+    end)
+end
+
+EventTab:CreateToggle({
+    Name = "Auto Knock House",
+    CurrentValue = EventSettings.AutoJump,
+    Callback = function(Value)
+        EventSettings.AutoJump = Value
+        SaveConfig()
+
+        if Value then
+            StartAutoJump()
+        else
+            AutoJumpRunning = false
+        end
+    end
+})
+
+if EventSettings.AutoJump then
+    StartAutoJump()
+end
+-- [END] Auto Knock House: nhảy mỗi 5 phút
 
