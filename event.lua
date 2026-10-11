@@ -6,6 +6,7 @@ local EventSettings = {
     AutoHatchWarBossTap = false,
     AutoEgg = false,
     AutoJump = false,
+    AutoUnlock = false,
 }
 
 local function SaveConfig()
@@ -275,6 +276,100 @@ if EventSettings.AutoHatchWarBossTap then
     StartAutoHWTap()
 end
 -- [END] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
+
+-- [START] Auto Unlock: quét màu để phân biệt 8 nhà khóa / đã mở
+local AutoUnlockRunning = false
+local HouseUnlockStates = {}
+
+local HouseColorPaths = {
+    [1] = { house = "House1", indices = {8, 10, 8} },
+    [2] = { house = "House2", indices = {7, 6} },
+    [3] = { house = "House3", indices = {8, 4, 9} },
+    [4] = { house = "House4", indices = {7, 5, 5} },
+    [5] = { house = "House5", indices = {5, 6, 10} },
+    [6] = { house = "House6", modelModel = true, indices = {2, 13} },
+    [7] = { house = "House7", indices = {6, 8} },
+    [8] = { house = "House8", indices = {11, 5, 3} },
+}
+
+local function ResolveHouseColorTarget(housesFolder, pathInfo)
+    local house = housesFolder:FindFirstChild(pathInfo.house)
+    if not house then return nil end
+
+    local current = house:FindFirstChild("Model")
+    if not current then return nil end
+
+    if pathInfo.modelModel then
+        current = current:FindFirstChild("Model")
+        if not current then return nil end
+    end
+
+    for _, childIndex in ipairs(pathInfo.indices) do
+        local children = current:GetChildren()
+        current = children[childIndex]
+        if not current then return nil end
+    end
+
+    if current:IsA("BasePart") then
+        return current
+    end
+    return nil
+end
+
+local function ScanHouseUnlockStates()
+    local things = workspace:FindFirstChild("__THINGS")
+    local instances = things and things:FindFirstChild("__INSTANCE_CONTAINER")
+    local active = instances and instances:FindFirstChild("Active")
+    local hatchWar = active and active:FindFirstChild("HatchWar")
+    local manor = hatchWar and hatchWar:FindFirstChild("6 | Count's Manor")
+    local houses = manor and manor:FindFirstChild("Houses")
+    if not houses then return end
+
+    for houseNumber, pathInfo in pairs(HouseColorPaths) do
+        local target = ResolveHouseColorTarget(houses, pathInfo)
+        if target then
+            local color = target.Color
+            HouseUnlockStates[houseNumber] = not (
+                color.R == 0 and color.G == 0 and color.B == 0
+            )
+        else
+            HouseUnlockStates[houseNumber] = nil
+        end
+    end
+end
+
+local function StartAutoUnlock()
+    if AutoUnlockRunning then return end
+    AutoUnlockRunning = true
+
+    task.spawn(function()
+        while EventSettings.AutoUnlock and AutoUnlockRunning do
+            pcall(ScanHouseUnlockStates)
+            task.wait(0.2)
+        end
+        AutoUnlockRunning = false
+    end)
+end
+
+EventTab:CreateToggle({
+    Name = "Auto Unlock",
+    CurrentValue = EventSettings.AutoUnlock,
+    Callback = function(Value)
+        EventSettings.AutoUnlock = Value
+        SaveConfig()
+
+        if Value then
+            StartAutoUnlock()
+        else
+            AutoUnlockRunning = false
+        end
+    end
+})
+
+if EventSettings.AutoUnlock then
+    StartAutoUnlock()
+end
+-- [END] Auto Unlock: quét màu để phân biệt 8 nhà khóa / đã mở
 
 -- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 task.spawn(function()
