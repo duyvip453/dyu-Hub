@@ -881,22 +881,22 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     if not questPath then return end
 
     while isEnabled() do
-        -- Xác nhận đúng quest và lấy số lượng còn thiếu từ progress.
+        -- Chỉ tiếp tục nếu vẫn là nhiệm vụ Collect Enchants được giao.
         local currentTitle, progressText = GetQuestInfoFromPath(questPath)
         if currentTitle ~= questTitle or not progressText then return end
 
         local current, target = ParseQuestProgress(progressText)
         if not current or not target or target <= 0 or current >= target then return end
-        -- Máy nâng cấp enchant dùng cùng dạng gọi đã có ở box UpdateEnchant:
-        -- mỗi request chỉ gửi 1 enchant; lặp lại để UI/server kịp cập nhật progress.
+
+        -- Nâng cấp từng enchant một, sau đó đọc lại progress trước request tiếp theo.
         local entry = usableEntries[math.random(1, #usableEntries)]
         if not isEnabled() then return end
-        local ok = pcall(function()
+        pcall(function()
             remote:InvokeServer(entry.Id, 1)
         end)
 
-        -- Chờ cập nhật sau mỗi enchant; lỗi request thì nghỉ lâu hơn rồi thử lại.
-        task.wait(ok and 0.5 or 1)
+        -- Chừa thời gian cho server/UI cập nhật; vòng sau sẽ kiểm tra tiến độ mới.
+        task.wait(0.5)
     end
 end
 -- [END] Box CollectEnchants
