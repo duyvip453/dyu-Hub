@@ -326,60 +326,43 @@ local QuestRankPaths = {
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
 -- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
--- Số trứng lấy từ tổng các OwnedSlot trong EggSlotsMachine.
+-- [START] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 local CurrentMaxEggHatchAmount = 1
+local EggCmds
+local CurrencyCmds
+local CalcEggPricePlayer
+
 local function RefreshMaxEggHatchAmount()
-    local playerGui = Player:FindFirstChild("PlayerGui")
-    local machines = playerGui and playerGui:FindFirstChild("_MACHINES")
-    local eggSlotsMachine = machines and machines:FindFirstChild("EggSlotsMachine")
-    local frame = eggSlotsMachine and eggSlotsMachine:FindFirstChild("Frame")
-    local slots = frame and frame:FindFirstChild("Slots")
-    local items = slots and slots:FindFirstChild("Items")
-    local slotsSection = items and items:FindFirstChild("SlotsSection")
-    local slotsContainer = slotsSection and slotsSection:FindFirstChild("Slots")
-    if not slotsContainer then
-        return CurrentMaxEggHatchAmount
-    end
+    local ok, amount = pcall(function()
+        local RS = ReplicatedStorage
+        local Library = RS:WaitForChild("Library")
+        local Client = Library:WaitForChild("Client")
+        local Balancing = Library:WaitForChild("Balancing")
 
-    local totalEggs = 0
-    local foundOwnedSlot = false
+        -- Nạp các module liên quan giống quy trình kiểm tra trong client.
+        EggCmds = EggCmds or require(Client:WaitForChild("EggCmds"))
+        CurrencyCmds = CurrencyCmds or require(Client:WaitForChild("CurrencyCmds"))
+        CalcEggPricePlayer = CalcEggPricePlayer or require(Balancing:WaitForChild("CalcEggPricePlayer"))
 
-    -- Quét tất cả OwnedSlot và cộng số trứng của từng slot đang sở hữu.
-    -- Giá trị này là giới hạn hatch tối đa, tuyệt đối không lấy số còn thiếu của quest.
-    local function ReadOwnedSlot(slot)
-        if not slot or slot.Name ~= "OwnedSlot" then return end
-        local title = slot:FindFirstChild("Title", true)
-        if not title or not title:IsA("TextLabel") then return end
+        return EggCmds.GetMaxHatch()
+    end)
 
-        local amountText = tostring(title.Text or ""):gsub(",", "")
-        local amount = tonumber(amountText:match("%+(%d+)%s*[Ee]ggs?"))
-            or tonumber(amountText:match("%+(%d+)"))
-        if amount and amount > 0 then
-            totalEggs = totalEggs + math.floor(amount)
-            foundOwnedSlot = true
-        end
-    end
-
-    -- Bao gồm cả trường hợp OwnedSlot nằm ngay trong container, không chỉ descendants.
-    for _, slot in ipairs(slotsContainer:GetChildren()) do
-        ReadOwnedSlot(slot)
-    end
-    for _, slot in ipairs(slotsContainer:GetDescendants()) do
-        ReadOwnedSlot(slot)
-    end
-
-    -- Nếu UI chưa tải hoặc đang trống, giữ nguyên giá trị tốt gần nhất.
-    if foundOwnedSlot and totalEggs > 0 then
-        CurrentMaxEggHatchAmount = math.max(1, totalEggs)
+    -- Nếu module chưa sẵn sàng hoặc trả dữ liệu không hợp lệ, giữ cache gần nhất.
+    if ok and type(amount) == "number" and amount >= 1 then
+        CurrentMaxEggHatchAmount = math.floor(amount)
     end
 
     return CurrentMaxEggHatchAmount
 end
+
+-- Đọc ngay một lần khi khởi tạo, sau đó làm mới định kỳ mỗi 30 giây.
 task.spawn(function()
-    while task.wait(0.5) do
+    RefreshMaxEggHatchAmount()
+    while task.wait(30) do
         RefreshMaxEggHatchAmount()
     end
 end)
+-- [END] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, stopWhenReady)
     if not isEnabled() then return end
     local character = Player.Character or Player.CharacterAdded:Wait()
