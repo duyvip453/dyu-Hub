@@ -730,30 +730,25 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- Chỉ dispatch khi bảng đã có đủ 4 nhiệm vụ hợp lệ.
-                -- Khi quest vừa hoàn thành/reset, UI có thể tạm thời chỉ hiện 1-3 nhiệm vụ;
-                -- đợi bảng đầy lại để tránh chọn nhầm nhiệm vụ tạm thời chen vào đầu bảng.
-                if #found < 4 then
+                -- Không bắt buộc đủ 4 nhiệm vụ: nếu một rank chưa tải hoặc một quest
+                -- chưa được nhận diện, vẫn phải tiếp tục với nhiệm vụ hợp lệ đang có.
+                -- ScanAndSortQuestRanks đã sắp xếp theo ưu tiên; xác minh lại trước khi dispatch.
+                local selected = found[1]
+                if not selected then
                     task.wait(0.5)
                 else
-                    -- Khi đủ 4 dòng, chỉ chọn nhiệm vụ đầu bảng theo Group priority.
-                    local selected = found[1]
-                    if not selected then
-                        task.wait(0.5)
-                    else
-                        local path = QuestRankPaths[selected.Rank]
-                        local currentTitle, currentProgress = GetQuestInfoFromPath(path)
+                    local path = QuestRankPaths[selected.Rank]
+                    local currentTitle, currentProgress = GetQuestInfoFromPath(path)
 
-                        -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
-                        if currentTitle == selected.Title
-                            and currentProgress
-                            and not IsQuestProgressComplete(currentProgress) then
-                            activeRank = selected.Rank
-                            activeTitle = selected.Title
-                            DispatchQuest(selected.Rank, selected.Title, selected.Group)
-                        else
-                            task.wait(0.1)
-                        end
+                    -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
+                    if currentTitle == selected.Title
+                        and currentProgress
+                        and not IsQuestProgressComplete(currentProgress) then
+                        activeRank = selected.Rank
+                        activeTitle = selected.Title
+                        DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                    else
+                        task.wait(0.1)
                     end
                 end
             end
