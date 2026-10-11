@@ -277,9 +277,22 @@ if EventSettings.AutoHatchWarBossTap then
 end
 -- [END] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
 
--- [START] Auto Unlock: quét màu để phân biệt 8 nhà khóa / đã mở
+-- [START] Auto Unlock: quét trạng thái, chờ đủ item, mở nhà đầu tiên còn khóa
 local AutoUnlockRunning = false
 local HouseUnlockStates = {}
+local UnlockItemUID = "451067eb4fc14e64bf64aa8f755dfe08"
+
+-- Tọa độ đứng tại từng căn nhà khi thực hiện Unlock
+local HouseUnlockPositions = {
+    [1] = Vector3.new(7489.35888671875, 19.386381149291992, 21917.291015625),
+    [2] = Vector3.new(7486.86669921875, 19.636981964111328, 22083.65234375),
+    [3] = Vector3.new(7544.9912109375, 19.636600494384766, 21916.857421875),
+    [4] = Vector3.new(7534.037109375, 19.637348175048828, 22084.875),
+    [5] = Vector3.new(7589.3935546875, 19.636981964111328, 21916.61328125),
+    [6] = Vector3.new(7577.2265625, 19.636981964111328, 22083.76171875),
+    [7] = Vector3.new(7635.36376953125, 19.386701583862305, 21917.314453125),
+    [8] = Vector3.new(7634.15966796875, 19.636600494384766, 22084.72265625),
+}
 
 local HouseColorPaths = {
     [1] = { house = "House1", indices = {8, 10, 8} },
@@ -310,19 +323,20 @@ local function ResolveHouseColorTarget(housesFolder, pathInfo)
         if not current then return nil end
     end
 
-    if current:IsA("BasePart") then
-        return current
-    end
-    return nil
+    return current:IsA("BasePart") and current or nil
 end
 
-local function ScanHouseUnlockStates()
+local function GetHatchWarHouses()
     local things = workspace:FindFirstChild("__THINGS")
     local instances = things and things:FindFirstChild("__INSTANCE_CONTAINER")
     local active = instances and instances:FindFirstChild("Active")
     local hatchWar = active and active:FindFirstChild("HatchWar")
     local manor = hatchWar and hatchWar:FindFirstChild("6 | Count's Manor")
-    local houses = manor and manor:FindFirstChild("Houses")
+    return manor and manor:FindFirstChild("Houses"), hatchWar
+end
+
+local function ScanHouseUnlockStates()
+    local houses = GetHatchWarHouses()
     if not houses then return end
 
     for houseNumber, pathInfo in pairs(HouseColorPaths) do
@@ -338,15 +352,142 @@ local function ScanHouseUnlockStates()
     end
 end
 
+-- Đọc số lượng item theo UID từ các Value/Attribute có sẵn trong client.
+-- Nếu game lưu inventory ở một module riêng không xuất hiện trong các instance này,
+-- cần thay phần thân hàm bằng hàm đọc inventory chính xác của game.
+local function ReadUnlockItemAmount()
+    local roots = { Player, Player:FindFirstChild("PlayerGui") }
+    local bestAmount = nil
+
+    local function ParseAmount(value)
+        if typeof(value) == "number" then
+            return math.max(0, value)
+        end
+        if typeof(value) == "string" then
+            local digits = value:gsub(",", ""):match("%d+")
+            return digits and tonumber(digits) or nil
+        end
+        return nil
+    end
+
+    for _, root in ipairs(roots) do
+        if root then
+            for _, object in ipairs(root:GetDescendants()) do
+                local uidMatches = object.Name == UnlockItemUID
+                    or object:GetAttribute("UID") == UnlockItemUID
+                    or object:GetAttribute("ItemUID") == UnlockItemUID
+                    or object:GetAttribute("Id") == UnlockItemUID
+
+                if uidMatches then
+                    local amount = nil
+                    if object:IsA("IntValue") or object:IsA("NumberValue") then
+                        amount = ParseAmount(object.Value)
+                    end
+
+                    if amount == nil then
+                        amount = ParseAmount(object:GetAttribute("Amount"))
+                            or ParseAmount(object:GetAttribute("Count"))
+                    end
+
+                    if amount == nil then
+                        local amountObject = object:FindFirstChild("Amount")
+                            or object:FindFirstChild("Count")
+                        if amountObject and (amountObject:IsA("IntValue") or amountObject:IsA("NumberValue")
+                            or amountObject:IsA("StringValue")) then
+                            amount = ParseAmount(amountObject.Value)
+                        end
+                    end
+
+                    if amount ~= nil then
+                        bestAmount = amount
+                        break
+                    end
+                end
+            end
+        end
+        if bestAmount ~= nil then break end
+    end
+
+    return bestAmount
+end
+
+local function ReadHousePrice(hatchWar, houseNumber)
+    local interact = hatchWar and hatchWar:FindFirstChild("INTERACT")
+    local doors = interact and interact:FindFirstChild("Doors")
+    local door = doors and doors:FindFirstChild(tostring(houseNumber))
+    local billboard = door and door:FindFirstChild("HatchWarHouseBillboard")
+    local houseBillboard = billboard and billboard:FindFirstChild("HatchWarHouse")
+    local price = houseBillboard and houseBillboard:FindFirstChild("Price")
+    local amount = price and price:FindFirstChild("Amount")
+    if not amount then return nil end
+
+    local text = tostring(amount.Text or ""):gsub(",", "")
+    local numericText = text:match("%d+%.?%d*")
+    return numericText and tonumber(numericText) or nil
+end
+
+local function GetFirstLockedHouse()
+    for houseNumber = 1, 8 do
+        if HouseUnlockStates[houseNumber] == false then
+            return houseNumber
+        end
+    end
+    return nil
+end
+
 local function StartAutoUnlock()
     if AutoUnlockRunning then return end
     AutoUnlockRunning = true
 
     task.spawn(function()
+        local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+        local unlockRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
+
         while EventSettings.AutoUnlock and AutoUnlockRunning do
             pcall(ScanHouseUnlockStates)
+
+            local targetHouse = GetFirstLockedHouse()
+            if targetHouse then
+                -- Cập nhật số lượng item và giá nhà liên tục; chỉ mua khi giá < số lượng item.
+                local itemAmount = ReadUnlockItemAmount()
+                local _, hatchWar = GetHatchWarHouses()
+                local housePrice = ReadHousePrice(hatchWar, targetHouse)
+
+                if itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount then
+                    local character = Player.Character or Player.CharacterAdded:Wait()
+                    local root = character:FindFirstChild("HumanoidRootPart")
+                        or character:WaitForChild("HumanoidRootPart")
+                    local originalCFrame = root.CFrame
+                    local housePosition = HouseUnlockPositions[targetHouse]
+
+                    if housePosition then
+                        local teleported = pcall(function()
+                            root.CFrame = CFrame.new(housePosition)
+                        end)
+
+                        if teleported then
+                            task.wait(0.25)
+                            pcall(function()
+                                unlockRemote:InvokeServer("HatchWar", "HW_Doors_Unlock", targetHouse)
+                            end)
+                            task.wait(0.25)
+
+                            -- Quay lại đúng vị trí đã lưu trước khi dịch chuyển.
+                            pcall(function()
+                                local currentCharacter = Player.Character
+                                    or Player.CharacterAdded:Wait()
+                                local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+                                    or currentCharacter:WaitForChild("HumanoidRootPart")
+                                currentRoot.CFrame = originalCFrame
+                            end)
+                        end
+                    end
+                end
+            end
+
             task.wait(0.2)
         end
+
         AutoUnlockRunning = false
     end)
 end
@@ -369,7 +510,7 @@ EventTab:CreateToggle({
 if EventSettings.AutoUnlock then
     StartAutoUnlock()
 end
--- [END] Auto Unlock: quét màu để phân biệt 8 nhà khóa / đã mở
+-- [END] Auto Unlock: quét trạng thái, chờ đủ item, mở nhà đầu tiên còn khóa
 
 -- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 task.spawn(function()
