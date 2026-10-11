@@ -552,6 +552,21 @@ local function DispatchQuest(rank, questTitle, questGroup)
         return false, "Nhiệm vụ đã được dispatch"
     end
 
+    -- Chẩn đoán điểm dispatch: in đúng tên box, rank, tiêu đề và progress hiện tại
+    -- trước khi bắt đầu chạy handler.
+    local questPath = QuestRankPaths[rank]
+    local _, progressText = questPath and GetQuestInfoFromPath(questPath)
+    local current, target = ParseQuestProgress(progressText)
+    print(string.format(
+        "[AutoRank] DISPATCH box=%s rank=%s quest=%s progress=%s count=%s/%s",
+        tostring(questGroup),
+        tostring(rank),
+        tostring(questTitle),
+        tostring(progressText),
+        tostring(current),
+        tostring(target)
+    ))
+
     state.Generation = state.Generation + 1
     local generation = state.Generation
     state.ActiveQuest = questTitle
@@ -929,10 +944,25 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
         local entry = usableEntries[((attempts) % #usableEntries) + 1]
         if not isEnabled() then return end
         attempts = attempts + 1
+        -- In tên enchant/ID và số lượng ngay trước khi gửi request.
+        print(string.format(
+            "[CollectEnchants] INVOKE quest=%s rank=%s enchant=%s id=%s amount=%d progress=%s",
+            tostring(questTitle),
+            tostring(rank),
+            tostring(entry.Enchant or "unknown"),
+            tostring(entry.Id),
+            1,
+            tostring(progressText)
+        ))
         local ok, result = pcall(function()
             return remote:InvokeServer(entry.Id, 1)
         end)
         lastResult = ok and tostring(result) or ("remote error: " .. tostring(result))
+        print(string.format(
+            "[CollectEnchants] RESULT ok=%s result=%s",
+            tostring(ok),
+            tostring(lastResult)
+        ))
         debug(progressText .. " | request " .. tostring(attempts) .. " | " .. tostring(entry.Enchant or entry.Id) .. " | " .. lastResult)
 
         task.wait(0.75)
