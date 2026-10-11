@@ -276,53 +276,20 @@ if EventSettings.AutoHatchWarBossTap then
 end
 -- [END] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
 
--- [START] Auto Knock House: nhảy ngay khi bật, sau đó mỗi 5 phút để hạn chế AFK
-local AutoJumpRunning = false
-
-local function StartAutoJump()
-    if AutoJumpRunning then return end
-    AutoJumpRunning = true
-
-    task.spawn(function()
-        while AutoJumpRunning and EventSettings.AutoJump do
-            pcall(function()
-                local character = Player.Character or Player.CharacterAdded:Wait()
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                    or character:WaitForChild("Humanoid")
-                if humanoid.Health > 0 then
-                    humanoid.Jump = true
-                end
-            end)
-
-            local elapsed = 0
-            while elapsed < 300 and AutoJumpRunning and EventSettings.AutoJump do
-                local step = math.min(1, 300 - elapsed)
-                task.wait(step)
-                elapsed = elapsed + step
+-- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
+task.spawn(function()
+    while true do
+        pcall(function()
+            local character = Player.Character or Player.CharacterAdded:Wait()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+                or character:WaitForChild("Humanoid")
+            if humanoid.Health > 0 then
+                humanoid.Jump = true
             end
-        end
+        end)
 
-        AutoJumpRunning = false
-    end)
-end
-
-EventTab:CreateToggle({
-    Name = "Auto Knock House",
-    CurrentValue = EventSettings.AutoJump,
-    Callback = function(Value)
-        EventSettings.AutoJump = Value
-        SaveConfig()
-
-        if Value then
-            StartAutoJump()
-        else
-            AutoJumpRunning = false
-        end
+        task.wait(300)
     end
-})
-
-if EventSettings.AutoJump then
-    StartAutoJump()
-end
--- [END] Auto Knock House: nhảy ngay khi bật, sau đó mỗi 5 phút để hạn chế AFK
+end)
+-- [END] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 
