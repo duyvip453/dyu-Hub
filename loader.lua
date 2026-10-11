@@ -683,7 +683,6 @@ local function StopDispatchedQuest(rank)
     state.Generation = state.Generation + 1
     state.Running = false
     state.ActiveQuest = nil
-    state.ActiveGroup = nil
 end
 
 -- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
