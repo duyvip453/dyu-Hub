@@ -691,101 +691,74 @@ local function StartAutoFarmRankLoop()
         task.wait(1)
         local activeRank = nil
         local activeTitle = nil
-        local firstPriorityKey = nil
-        local firstPrioritySince = nil
-
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
-            -- Quét toàn bộ rank liên tục; hàm tự reset bảng rồi điền kết quả mới.
             local found = ScanAndSortQuestRanks()
 
             if activeRank then
-                -- Theo dõi progress của đúng quest/rank đang chạy; không hiển thị progress và không log.
                 local activePath = QuestRankPaths[activeRank]
                 local latestTitle, latestProgress = GetQuestInfoFromPath(activePath)
                 local isFinished = latestTitle == activeTitle
                     and latestProgress
                     and IsQuestProgressComplete(latestProgress)
                 local questChanged = latestTitle ~= activeTitle or not latestProgress
-
                 local activeState = QuestRankState[activeRank]
                 local handlerStopped = not activeState or not activeState.Running
 
                 if isFinished or questChanged or handlerStopped then
-                    -- Nếu handler tự return/lỗi khi quest vẫn còn, xóa trạng thái cũ
-                    -- để scheduler có thể quét và dispatch lại thay vì kẹt ở ActiveQuest.
                     StopDispatchedQuest(activeRank)
                     activeRank = nil
                     activeTitle = nil
-                    firstPriorityKey = nil
-                    firstPrioritySince = nil
-                    ScanAndSortQuestRanks()
                     task.wait(0.1)
                 else
                     task.wait(0.5)
                 end
             else
-                -- Chỉ cần có quest hợp lệ; quest đứng đầu phải ổn định 1,5 giây
-                -- (cùng rank + title + group) mới được dispatch.
-                local selected = found[1]
-                if not selected then
-                    firstPriorityKey = nil
-                    firstPrioritySince = nil
-                    SetQuestDebug("đang chờ quest hợp lệ")
-                    task.wait(0.5)
+                -- S1 không được dispatch khi S4 chưa xuất hiện trong bảng priority.
+                local first = found[1]
+                local fourth = found[4]
+                if not first or not fourth then
+                    SetQuestDebug("đang chờ đủ S1 và S4")
+                    task.wait(0.2)
                 else
-                    local priorityKey = table.concat({
-                        tostring(selected.Rank),
-                        tostring(selected.Title),
-                        tostring(selected.Group)
-                    }, "|")
+                    -- S4 đã có: quét lại toàn bộ bảng một lần, xác nhận S1 và S4
+                    -- vẫn tồn tại và S1 chưa bị đổi trước khi gọi box.
+                    local verified = ScanAndSortQuestRanks()
+                    local verifiedFirst = verified[1]
+                    local verifiedFourth = verified[4]
+                    local sameFirst = verifiedFirst
+                        and verifiedFirst.Rank == first.Rank
+                        and verifiedFirst.Title == first.Title
+                        and verifiedFirst.Group == first.Group
 
-                    if priorityKey ~= firstPriorityKey then
-                        firstPriorityKey = priorityKey
-                        firstPrioritySince = os.clock()
-                        SetQuestDebug("đang xác nhận quest đầu bảng 1,5s: " .. selected.Title)
-                        task.wait(0.1)
-                    elseif os.clock() - firstPrioritySince < 1.5 then
-                        task.wait(0.1)
-                    else
-                        local path = QuestRankPaths[selected.Rank]
+                    if sameFirst and verifiedFourth then
+                        local path = QuestRankPaths[verifiedFirst.Rank]
                         local currentTitle, currentProgress
                         if path then
                             currentTitle, currentProgress = GetQuestInfoFromPath(path)
                         end
 
-                        -- Quét và xác minh lại trước dispatch để tránh chạy quest đã đổi.
-                        local latestFound = ScanAndSortQuestRanks()
-                        local latest = latestFound[1]
-                        local stillFirst = latest
-                            and latest.Rank == selected.Rank
-                            and latest.Title == selected.Title
-                            and latest.Group == selected.Group
-
-                        if stillFirst
-                            and currentTitle == selected.Title
+                        if currentTitle == verifiedFirst.Title
                             and currentProgress
                             and not IsQuestProgressComplete(currentProgress) then
                             local dispatched, dispatchReason = DispatchQuest(
-                                selected.Rank,
-                                selected.Title,
-                                selected.Group
+                                verifiedFirst.Rank,
+                                verifiedFirst.Title,
+                                verifiedFirst.Group
                             )
-                            firstPriorityKey = nil
-                            firstPrioritySince = nil
                             if dispatched then
-                                activeRank = selected.Rank
-                                activeTitle = selected.Title
-                                SetQuestDebug("đã dispatch " .. selected.Title)
+                                activeRank = verifiedFirst.Rank
+                                activeTitle = verifiedFirst.Title
+                                SetQuestDebug("đã dispatch " .. verifiedFirst.Title)
                             else
                                 SetQuestDebug("dispatch thất bại: " .. tostring(dispatchReason))
-                                task.wait(0.5)
+                                task.wait(0.2)
                             end
                         else
-                            -- Quest đầu bảng đã đổi trong thời gian chờ: bắt đầu tính lại 1,5 giây.
-                            firstPriorityKey = nil
-                            firstPrioritySince = nil
                             task.wait(0.1)
                         end
+                    else
+                        -- S1/S4 chưa ổn định qua lần quét xác nhận; đợi vòng sau.
+                        task.wait(0.1)
                     end
                 end
             end
