@@ -82,11 +82,6 @@ local EventTab = Window:CreateTab({
 -- [END] Tải module giao diện và tạo cửa sổ/tab chính
 
 -- [START] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
-EventTab:CreateSection("Event")
-EventTab:CreateLabel({
-    Text = "Tự động kích hoạt LiveCircle, gọi HW_Boss_Tap và HW_Boss_Start khi bật.",
-    Style = 1
-})
 EventTab:CreateSection("Hatch War")
 
 local AutoTapRunning = false
