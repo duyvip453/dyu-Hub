@@ -1,6 +1,3 @@
--- [START] EVENT MODULE: dùng chung UI từ backgroud.lua, còn chức năng và config độc lập.
-
--- [START] Config riêng của Event (cùng cơ chế save/load như loader.lua)
 local HttpService = game:GetService("HttpService")
 local Player = game:GetService("Players").LocalPlayer
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
@@ -41,9 +38,6 @@ local function LoadConfig()
 end
 
 LoadConfig()
--- [END] Config riêng của Event
-
--- [START] Tải module giao diện và tạo cửa sổ/tab chính
 LoadConfig()
 local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
@@ -77,19 +71,13 @@ local EventTab = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
-
-
--- [END] Tải module giao diện và tạo cửa sổ/tab chính
-
--- [START] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
--- [START] Chỉ giữ toggle Auto HW Boss Tap
+-- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
 local function StartAutoHWTap()
     if AutoTapRunning then return end
     AutoTapRunning = true
-
-    -- [START] Teleport ngay khi bật toggle, trước khi chạy hai loop remote
+-- [START] Teleport tọa độ mục tiêu
     local function TeleportToHWBossPosition()
         local ok, err = pcall(function()
             local player = game:GetService("Players").LocalPlayer
@@ -97,16 +85,11 @@ local function StartAutoHWTap()
             local root = character:WaitForChild("HumanoidRootPart")
             root.CFrame = CFrame.new(6950.587890625, 16.337787628173828, 21980.33984375)
         end)
-
-        if not ok then
-            warn("[DYU HUB / EVENT] Auto HW Teleport error:", err)
-        end
     end
 
     TeleportToHWBossPosition()
-    -- [END] Teleport ngay khi bật toggle, trước khi chạy hai loop remote
-
-    -- [START] Loop 1: kích hoạt LiveCircle và gọi Tap remote
+-- [END] Teleport tọa độ mục tiêu
+-- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
             local ok, err = pcall(function()
@@ -127,16 +110,11 @@ local function StartAutoHWTap()
                 tapRemote:FireServer("HatchWar", "HW_Boss_Tap", "circle")
             end)
 
-            if not ok then
-                warn("[DYU HUB / EVENT] Auto HW Tap error:", err)
-            end
-
             task.wait(0.2)
         end
     end)
-    -- [END] Loop 1: kích hoạt LiveCircle và gọi Tap remote
-
-    -- [START] Loop 2: gọi Boss Start remote tuần tự, có khoảng nghỉ
+-- [END] LiveCircle + HW_Boss_Tap
+-- [START] HW_Boss_Start
     task.spawn(function()
         local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
         local startRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
@@ -145,18 +123,11 @@ local function StartAutoHWTap()
             local ok, err = pcall(function()
                 startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 4)
             end)
-
-            if not ok then
-                warn("[DYU HUB / EVENT] Auto HW Boss Start error:", err)
-            end
-
-            -- InvokeServer có thể yield; nghỉ thêm để tránh gửi yêu cầu quá dày.
             task.wait(0.5)
         end
     end)
-    -- [END] Loop 2: gọi Boss Start remote tuần tự, có khoảng nghỉ
-
-    -- [START] Loop 3: teleport lại về tọa độ mục tiêu mỗi 5 giây
+-- [END] HW_Boss_Start
+-- [START] Teleport mỗi 5 giây
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
             task.wait(5)
@@ -167,7 +138,7 @@ local function StartAutoHWTap()
             TeleportToHWBossPosition()
         end
     end)
-    -- [END] Loop 3: teleport lại về tọa độ mục tiêu mỗi 5 giây
+-- [END] Teleport mỗi 5 giây
 end
 
 EventTab:CreateToggle({
@@ -178,11 +149,9 @@ EventTab:CreateToggle({
         SaveConfig()
 
         if Value then
-            print("[DYU HUB / EVENT] Auto HW Boss: ON")
             StartAutoHWTap()
         else
             AutoTapRunning = false
-            print("[DYU HUB / EVENT] Auto HW Boss: OFF")
         end
     end
 })
