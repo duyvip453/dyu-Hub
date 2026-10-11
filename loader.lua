@@ -410,11 +410,8 @@ local QuestRankState = {}
 for rank in pairs(QuestRankPaths) do
     QuestRankState[rank] = {
         ActiveQuest = nil,
-        ActiveGroup = nil,
-        CompletedQuest = nil,
         Running = false,
-        Generation = 0,
-        CompleteWaitUntil = 0
+        Generation = 0
     }
 end
 local function GetQuestInfoFromPath(path)
@@ -466,7 +463,6 @@ local QuestMatchRules = {
 
 local function IdentifyQuestGroup(questTitle)
     local originalText = NormalizeQuestText(questTitle, true)
-    local normalizedTitle = NormalizeQuestText(questTitle, true)
 
     -- Phân loại toàn bộ nhiệm vụ qua QuestMatchRules để sau này bộ ưu tiên
     -- có thể chọn Group trước khi gọi QuestScriptBoxes[Group].
@@ -555,7 +551,8 @@ local function DispatchQuest(rank, questTitle, questGroup)
     -- Chẩn đoán điểm dispatch: in đúng tên box, rank, tiêu đề và progress hiện tại
     -- trước khi bắt đầu chạy handler.
     local questPath = QuestRankPaths[rank]
-    local _, progressText = questPath and GetQuestInfoFromPath(questPath)
+    local _, progressText
+    if questPath then _, progressText = GetQuestInfoFromPath(questPath) end
     local current, target = ParseQuestProgress(progressText)
     print(string.format(
         "[AutoRank] DISPATCH box=%s rank=%s quest=%s progress=%s count=%s/%s",
@@ -570,7 +567,6 @@ local function DispatchQuest(rank, questTitle, questGroup)
     state.Generation = state.Generation + 1
     local generation = state.Generation
     state.ActiveQuest = questTitle
-    state.ActiveGroup = questGroup
     state.Running = true
 
     task.spawn(function()
@@ -580,8 +576,7 @@ local function DispatchQuest(rank, questTitle, questGroup)
 
         if state.Generation == generation then
             state.Running = false
-            state.LastHandlerOk = ok
-            state.LastHandlerError = not ok and tostring(err) or nil
+            -- El scheduler observa Running=false y decide cuándo volver a despachar.
         end
     end)
     return true
@@ -596,12 +591,7 @@ local function SetQuestRankEnabled(rank, value)
         state.Generation = state.Generation + 1
         state.Running = false
         state.ActiveQuest = nil
-        state.ActiveGroup = nil
-        state.CompletedQuest = nil
-        state.CompleteWaitUntil = 0
     end
-
-    SaveConfig()
 end
 
 -- [AUTO FARM RANK: BẢNG ƯU TIÊN + BỘ ĐIỀU PHỐI]
@@ -623,13 +613,6 @@ local QuestGroupPriority = {
     BestArea = 14
 }
 local RankScanOrder = {"Easy", "Medium", "Hard", "Extreme"}
-local RankDisplayName = {
-    Easy = "Easy",
-    Medium = "Medium",
-    Hard = "Hard",
-    Extreme = "Extreme"
-}
-
 -- Bốn dòng ưu tiên và một dòng chẩn đoán ngắn cho nhiệm vụ đang xử lý.
 Tab1:CreateSection("Bảng ưu tiên nhiệm vụ")
 local PriorityLabels = {}
@@ -701,8 +684,6 @@ local function StopDispatchedQuest(rank)
     state.Running = false
     state.ActiveQuest = nil
     state.ActiveGroup = nil
-    state.CompletedQuest = nil
-    state.CompleteWaitUntil = 0
 end
 
 -- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
@@ -712,9 +693,10 @@ local AutoFarmRankGeneration = 0
 local AutoFarmRankRunning = false
 
 local function StartAutoFarmRankLoop()
+    -- Kiểm tra trước khi đổi generation để không vô hiệu hóa nhầm loop đang chạy.
+    if AutoFarmRankRunning then return end
     AutoFarmRankGeneration = AutoFarmRankGeneration + 1
     local loopGeneration = AutoFarmRankGeneration
-    if AutoFarmRankRunning then return end
     AutoFarmRankRunning = true
 
     task.spawn(function()
@@ -746,6 +728,7 @@ local function StartAutoFarmRankLoop()
                     StopDispatchedQuest(activeRank)
                     activeRank = nil
                     activeTitle = nil
+                    firstPriorityKey = nil
                     firstPrioritySince = nil
                     ScanAndSortQuestRanks()
                     task.wait(0.1)
@@ -817,11 +800,9 @@ local function StartAutoFarmRankLoop()
             end
         end
 
-        -- Nếu toggle bị tắt trong khi box chạy, vô hiệu hóa box trước khi kết thúc loop.
-        if activeRank then
-            StopDispatchedQuest(activeRank)
-        end
+        -- Chỉ loop hiện hành được phép dọn state; loop cũ không được dừng handler mới.
         if loopGeneration == AutoFarmRankGeneration then
+            if activeRank then StopDispatchedQuest(activeRank) end
             AutoFarmRankRunning = false
         end
     end)
@@ -840,13 +821,11 @@ Tab1:CreateToggle({
         if Value then
             StartAutoFarmRankLoop()
         else
-            -- scan check xem script nào chạy
             AutoFarmRankGeneration = AutoFarmRankGeneration + 1
-            for _, rank in ipairs(RankScanOrder) do
-                StopDispatchedQuest(rank)
-            end
+            -- SetQuestRankEnabled đã vô hiệu hóa generation và xóa state từng rank.
             AutoFarmRankRunning = false
             ClearPriorityTable()
+            SetQuestDebug("đã tắt")
         end
     end
 })
