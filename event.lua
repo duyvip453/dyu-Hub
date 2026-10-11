@@ -83,7 +83,7 @@ local function StartAutoHWTap()
             local player = game:GetService("Players").LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
             local root = character:WaitForChild("HumanoidRootPart")
-            root.CFrame = CFrame.new(6950.587890625, 16.337787628173828, 21980.33984375)
+            root.CFrame = CFrame.new(7629.39599609375, 16.33778953552246, 21993.271484375)
         end)
     end
 
@@ -121,7 +121,7 @@ local function StartAutoHWTap()
 
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
             local ok, err = pcall(function()
-                startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 4)
+                startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
             end)
             task.wait(0.5)
         end
