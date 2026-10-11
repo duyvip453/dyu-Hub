@@ -447,9 +447,9 @@ local function StartAutoUnlock()
         local printedNotFound = false
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
+            -- Mỗi vòng đều quét lại cả 8 nhà để tìm căn bị khóa đầu tiên hiện tại.
             pcall(ScanHouseUnlockStates)
 
-            -- In số lượng item khi bật Auto Unlock và mỗi khi số lượng thay đổi.
             local itemAmount = ReadUnlockItemAmount()
             if itemAmount ~= nil then
                 if lastPrintedAmount ~= itemAmount then
@@ -492,24 +492,47 @@ local function StartAutoUnlock()
                             end
                             task.wait(0.25)
 
-                            -- Quay lại đúng vị trí đã lưu trước khi dịch chuyển.
+                            -- Trở về vị trí ban đầu sau khi gửi lệnh mở khóa.
                             pcall(function()
-                                local currentCharacter = Player.Character
-                                    or Player.CharacterAdded:Wait()
+                                local currentCharacter = Player.Character or Player.CharacterAdded:Wait()
                                 local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
                                     or currentCharacter:WaitForChild("HumanoidRootPart")
                                 currentRoot.CFrame = originalCFrame
                             end)
+
+                            -- Chờ trạng thái căn vừa xử lý cập nhật rồi mới quét chọn căn tiếp theo.
+                            -- Tránh gọi Unlock lặp liên tục vào cùng một căn khi server cập nhật chậm.
+                            local waitStarted = os.clock()
+                            local houseOpened = false
+                            repeat
+                                task.wait(0.25)
+                                pcall(ScanHouseUnlockStates)
+                                houseOpened = HouseUnlockStates[targetHouse] == true
+                            until houseOpened
+                                or not (EventSettings.AutoUnlock and AutoUnlockRunning)
+                                or os.clock() - waitStarted >= 5
+
+                            if houseOpened then
+                                print("[Auto Unlock] Nhà " .. targetHouse .. " đã được xác nhận mở; chuyển sang quét nhà tiếp theo.")
+                            else
+                                warn("[Auto Unlock] Chưa xác nhận được nhà " .. targetHouse .. " đã mở. Sẽ quét lại, không spam lệnh liên tục.")
+                                task.wait(1)
+                            end
                         end
                     end
                 elseif itemAmount ~= nil and housePrice ~= nil then
-                    -- Không dịch chuyển khi chưa đủ item; chỉ báo khi giá hoặc số lượng thay đổi.
+                    -- Không dịch chuyển khi chưa đủ item; tiếp tục cập nhật giá và số lượng.
                     local status = "Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
                         .. " | item: " .. tostring(itemAmount) .. " | chưa đủ điều kiện (cần giá < item)"
                     if status ~= lastPrintedStatus then
                         print("[Auto Unlock] " .. status)
                         lastPrintedStatus = status
                     end
+                end
+            else
+                if lastPrintedStatus ~= "all-unlocked" then
+                    print("[Auto Unlock] Không còn nhà nào được đánh dấu là đang khóa.")
+                    lastPrintedStatus = "all-unlocked"
                 end
             end
 
