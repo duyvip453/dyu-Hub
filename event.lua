@@ -145,6 +145,12 @@ local function StartAutoEgg()
     AutoEggRunning = true
 
     task.spawn(function()
+        pcall(function()
+            local character = Player.Character or Player.CharacterAdded:Wait()
+            local root = character:WaitForChild("HumanoidRootPart")
+            root.CFrame = CFrame.new(7537.853515625, 16.33778953552246, 21972.216796875)
+        end)
+
         local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
         local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
 
