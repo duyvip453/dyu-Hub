@@ -746,7 +746,7 @@ local function StartAutoFarmRankLoop()
                     StopDispatchedQuest(activeRank)
                     activeRank = nil
                     activeTitle = nil
-                    fullPrioritySince = nil
+                    firstPrioritySince = nil
                     ScanAndSortQuestRanks()
                     task.wait(0.1)
                 else
