@@ -83,7 +83,7 @@ local function StartAutoHWTap()
             local player = game:GetService("Players").LocalPlayer
             local character = player.Character or player.CharacterAdded:Wait()
             local root = character:WaitForChild("HumanoidRootPart")
-            root.CFrame = CFrame.new(7629.39599609375, 16.33778953552246, 21993.271484375)
+            root.CFrame = CFrame.new(7626.8623046875, 16.33778953552246, 21981.595703125)
         end)
     end
 
