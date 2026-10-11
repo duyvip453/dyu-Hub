@@ -145,6 +145,44 @@ local Tab1 = Window:CreateTab({
     ShowTitle = true
 })
 
+-- [START] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
+local CurrentMaxEggHatchAmount = 1
+local EggCmds
+local CurrencyCmds
+local CalcEggPricePlayer
+
+local function RefreshMaxEggHatchAmount()
+    local ok, amount = pcall(function()
+        local RS = ReplicatedStorage
+        local Library = RS:WaitForChild("Library")
+        local Client = Library:WaitForChild("Client")
+        local Balancing = Library:WaitForChild("Balancing")
+
+        -- Nạp các module liên quan giống quy trình kiểm tra trong client.
+        EggCmds = EggCmds or require(Client:WaitForChild("EggCmds"))
+        CurrencyCmds = CurrencyCmds or require(Client:WaitForChild("CurrencyCmds"))
+        CalcEggPricePlayer = CalcEggPricePlayer or require(Balancing:WaitForChild("CalcEggPricePlayer"))
+
+        return EggCmds.GetMaxHatch()
+    end)
+
+    -- Nếu module chưa sẵn sàng hoặc trả dữ liệu không hợp lệ, giữ cache gần nhất.
+    if ok and type(amount) == "number" and amount >= 1 then
+        CurrentMaxEggHatchAmount = math.floor(amount)
+    end
+
+    return CurrentMaxEggHatchAmount
+end
+
+-- Đọc ngay một lần khi khởi tạo, sau đó làm mới định kỳ mỗi 30 giây.
+task.spawn(function()
+    RefreshMaxEggHatchAmount()
+    while task.wait(30) do
+        RefreshMaxEggHatchAmount()
+    end
+end)
+-- [END] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
+
 -- [START] Hiển thị Rank và tiến độ nhiệm vụ
 --rank
 local CoreGui = game:GetService("CoreGui")
@@ -312,43 +350,7 @@ local QuestRankPaths = {
 -- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
 -- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
 -- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
--- [START] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
-local CurrentMaxEggHatchAmount = 1
-local EggCmds
-local CurrencyCmds
-local CalcEggPricePlayer
 
-local function RefreshMaxEggHatchAmount()
-    local ok, amount = pcall(function()
-        local RS = ReplicatedStorage
-        local Library = RS:WaitForChild("Library")
-        local Client = Library:WaitForChild("Client")
-        local Balancing = Library:WaitForChild("Balancing")
-
-        -- Nạp các module liên quan giống quy trình kiểm tra trong client.
-        EggCmds = EggCmds or require(Client:WaitForChild("EggCmds"))
-        CurrencyCmds = CurrencyCmds or require(Client:WaitForChild("CurrencyCmds"))
-        CalcEggPricePlayer = CalcEggPricePlayer or require(Balancing:WaitForChild("CalcEggPricePlayer"))
-
-        return EggCmds.GetMaxHatch()
-    end)
-
-    -- Nếu module chưa sẵn sàng hoặc trả dữ liệu không hợp lệ, giữ cache gần nhất.
-    if ok and type(amount) == "number" and amount >= 1 then
-        CurrentMaxEggHatchAmount = math.floor(amount)
-    end
-
-    return CurrentMaxEggHatchAmount
-end
-
--- Đọc ngay một lần khi khởi tạo, sau đó làm mới định kỳ mỗi 30 giây.
-task.spawn(function()
-    RefreshMaxEggHatchAmount()
-    while task.wait(30) do
-        RefreshMaxEggHatchAmount()
-    end
-end)
--- [END] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, stopWhenReady)
     if not isEnabled() then return end
     local character = Player.Character or Player.CharacterAdded:Wait()
