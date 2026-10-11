@@ -442,18 +442,35 @@ local function StartAutoUnlock()
     task.spawn(function()
         local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
         local unlockRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
+        local lastPrintedAmount = nil
+        local lastPrintedStatus = nil
+        local printedNotFound = false
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
             pcall(ScanHouseUnlockStates)
 
+            -- In số lượng item khi bật Auto Unlock và mỗi khi số lượng thay đổi.
+            local itemAmount = ReadUnlockItemAmount()
+            if itemAmount ~= nil then
+                if lastPrintedAmount ~= itemAmount then
+                    print("[Auto Unlock] Item UID " .. UnlockItemUID .. " | số lượng: " .. tostring(itemAmount))
+                    lastPrintedAmount = itemAmount
+                end
+                printedNotFound = false
+            elseif not printedNotFound then
+                warn("[Auto Unlock] Chưa tìm thấy item UID " .. UnlockItemUID .. " trong Player/PlayerGui; cần xác minh đường dẫn inventory.")
+                printedNotFound = true
+            end
+
             local targetHouse = GetFirstLockedHouse()
             if targetHouse then
-                -- Cập nhật số lượng item và giá nhà liên tục; chỉ mua khi giá < số lượng item.
-                local itemAmount = ReadUnlockItemAmount()
                 local _, hatchWar = GetHatchWarHouses()
                 local housePrice = ReadHousePrice(hatchWar, targetHouse)
 
                 if itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount then
+                    print("[Auto Unlock] Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
+                        .. " | item: " .. tostring(itemAmount) .. " | đang mở khóa")
+
                     local character = Player.Character or Player.CharacterAdded:Wait()
                     local root = character:FindFirstChild("HumanoidRootPart")
                         or character:WaitForChild("HumanoidRootPart")
@@ -467,9 +484,12 @@ local function StartAutoUnlock()
 
                         if teleported then
                             task.wait(0.25)
-                            pcall(function()
-                                unlockRemote:InvokeServer("HatchWar", "HW_Doors_Unlock", targetHouse)
+                            local unlockOk, unlockResult = pcall(function()
+                                return unlockRemote:InvokeServer("HatchWar", "HW_Doors_Unlock", targetHouse)
                             end)
+                            if not unlockOk then
+                                warn("[Auto Unlock] Lệnh mở nhà " .. targetHouse .. " gặp lỗi: " .. tostring(unlockResult))
+                            end
                             task.wait(0.25)
 
                             -- Quay lại đúng vị trí đã lưu trước khi dịch chuyển.
@@ -481,6 +501,14 @@ local function StartAutoUnlock()
                                 currentRoot.CFrame = originalCFrame
                             end)
                         end
+                    end
+                elseif itemAmount ~= nil and housePrice ~= nil then
+                    -- Không dịch chuyển khi chưa đủ item; chỉ báo khi giá hoặc số lượng thay đổi.
+                    local status = "Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
+                        .. " | item: " .. tostring(itemAmount) .. " | chưa đủ điều kiện (cần giá < item)"
+                    if status ~= lastPrintedStatus then
+                        print("[Auto Unlock] " .. status)
+                        lastPrintedStatus = status
                     end
                 end
             end
