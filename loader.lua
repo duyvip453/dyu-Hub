@@ -545,8 +545,12 @@ end
 local function DispatchQuest(rank, questTitle, questGroup)
     local state = QuestRankState[rank]
     local scriptBox = QuestScriptBoxes[questGroup]
-    if not state or type(scriptBox) ~= "function" then return end
-    if state.Running or state.ActiveQuest == questTitle then return end
+    if not state or type(scriptBox) ~= "function" then
+        return false, "Không có script box: " .. tostring(questGroup)
+    end
+    if state.Running or state.ActiveQuest == questTitle then
+        return false, "Nhiệm vụ đã được dispatch"
+    end
 
     state.Generation = state.Generation + 1
     local generation = state.Generation
@@ -559,15 +563,13 @@ local function DispatchQuest(rank, questTitle, questGroup)
             return IsQuestRankEnabled(rank) and state.Generation == generation
         end)
 
-        if not ok then
-            -- Lỗi box được cô lập để không làm sập bộ quét nhiệm vụ.
-            -- Chưa thêm log theo yêu cầu không dùng warn/print.
-        end
-
         if state.Generation == generation then
             state.Running = false
+            state.LastHandlerOk = ok
+            state.LastHandlerError = not ok and tostring(err) or nil
         end
     end)
+    return true
 end
 
 local function SetQuestRankEnabled(rank, value)
@@ -748,10 +750,21 @@ local function StartAutoFarmRankLoop()
                             and currentTitle == selected.Title
                             and currentProgress
                             and not IsQuestProgressComplete(currentProgress) then
-                            activeRank = selected.Rank
-                            activeTitle = selected.Title
+                            local dispatched, dispatchReason = DispatchQuest(
+                                selected.Rank,
+                                selected.Title,
+                                selected.Group
+                            )
                             fullPrioritySince = nil
-                            DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                            if dispatched then
+                                activeRank = selected.Rank
+                                activeTitle = selected.Title
+                            else
+                                -- Không giữ activeRank nếu dispatch thất bại; thử quét lại sau cooldown.
+                                activeRank = nil
+                                activeTitle = nil
+                                task.wait(0.5)
+                            end
                         else
                             fullPrioritySince = nil
                             task.wait(0.1)
