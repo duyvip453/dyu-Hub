@@ -796,7 +796,7 @@ Tab1:CreateToggle({
 -- end
 -- [END] Box Collect
 
--- [START] Box CollectPotions: chọn ngẫu nhiên ID potion rồi gọi máy nâng cấp
+-- [START] Box CollectPotions: dùng số lượng còn thiếu theo progress của quest
 QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
@@ -814,18 +814,32 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
     local remote = network and network:FindFirstChild(remoteName)
     if not remote or not remote:IsA("RemoteFunction") then return end
 
+    local questPath = QuestRankPaths[rank]
+    if not questPath then return end
+
     while isEnabled() do
+        -- Chỉ xử lý khi đúng quest vẫn còn; đọc progress để tính số lượng còn thiếu.
+        local currentTitle, progressText = GetQuestInfoFromPath(questPath)
+        if currentTitle ~= questTitle or not progressText then return end
+
+        local current, target = ParseQuestProgress(progressText)
+        if not current or not target or target <= 0 or current >= target then return end
+        local amountRemaining = math.max(1, math.floor(target - current))
+
+        -- Gửi số lượng còn thiếu thay vì nâng cấp từng món theo vòng lặp.
         local entry = usableEntries[math.random(1, #usableEntries)]
-        if not isEnabled() then break end
+        if not isEnabled() then return end
         pcall(function()
-            remote:InvokeServer(entry.Id, 1)
+            remote:InvokeServer(entry.Id, amountRemaining)
         end)
+
+        -- Chờ UI cập nhật progress; chỉ gửi lượt tiếp nếu quest vẫn chưa đủ.
         task.wait(0.5)
     end
 end
 -- [END] Box CollectPotions
 
--- [START] Box CollectEnchants: lấy ID ngẫu nhiên, nâng cấp 1 lần mỗi lượt đến khi quest xong
+-- [START] Box CollectEnchants: dùng số lượng còn thiếu theo progress của quest
 QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     if not isEnabled() then return end
 
@@ -849,20 +863,23 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     if not questPath then return end
 
     while isEnabled() do
-        -- Kiểm tra chính quest/rank này để dừng ngay khi hoàn thành hoặc đổi nhiệm vụ.
-        local currentTitle, currentProgress = GetQuestInfoFromPath(questPath)
-        if not currentTitle or currentTitle ~= questTitle then return end
-        if IsQuestProgressComplete(currentProgress) then return end
-        if not isEnabled() then return end
+        -- Xác nhận đúng quest và lấy số lượng còn thiếu từ progress.
+        local currentTitle, progressText = GetQuestInfoFromPath(questPath)
+        if currentTitle ~= questTitle or not progressText then return end
 
-        -- Mỗi lượt chọn ngẫu nhiên một ID hợp lệ và gọi với số lượng 1.
+        local current, target = ParseQuestProgress(progressText)
+        if not current or not target or target <= 0 or current >= target then return end
+        local amountRemaining = math.max(1, math.floor(target - current))
+
+        -- Gửi số lượng còn thiếu trong một lần gọi, thay vì gọi 1 món mỗi giây.
         local entry = usableEntries[math.random(1, #usableEntries)]
+        if not isEnabled() then return end
         local ok = pcall(function()
-            remote:InvokeServer(entry.Id, 1)
+            remote:InvokeServer(entry.Id, amountRemaining)
         end)
 
-        -- Nếu lời gọi thất bại, tránh gọi dồn liên tục.
-        task.wait(ok and 0.75 or 1)
+        -- Nếu remote thất bại thì đợi lâu hơn; nếu thành công chờ progress cập nhật.
+        task.wait(ok and 0.5 or 1)
     end
 end
 -- [END] Box CollectEnchants
