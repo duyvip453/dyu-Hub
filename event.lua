@@ -90,6 +90,23 @@ local function StartAutoHWTap()
     if AutoTapRunning then return end
     AutoTapRunning = true
 
+    -- [START] Teleport ngay khi bật toggle, trước khi chạy hai loop remote
+    local function TeleportToHWBossPosition()
+        local ok, err = pcall(function()
+            local player = game:GetService("Players").LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local root = character:WaitForChild("HumanoidRootPart")
+            root.CFrame = CFrame.new(6950.587890625, 16.337787628173828, 21980.33984375)
+        end)
+
+        if not ok then
+            warn("[DYU HUB / EVENT] Auto HW Teleport error:", err)
+        end
+    end
+
+    TeleportToHWBossPosition()
+    -- [END] Teleport ngay khi bật toggle, trước khi chạy hai loop remote
+
     -- [START] Loop 1: kích hoạt LiveCircle và gọi Tap remote
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
@@ -139,6 +156,19 @@ local function StartAutoHWTap()
         end
     end)
     -- [END] Loop 2: gọi Boss Start remote tuần tự, có khoảng nghỉ
+
+    -- [START] Loop 3: teleport lại về tọa độ mục tiêu mỗi 5 giây
+    task.spawn(function()
+        while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
+            task.wait(5)
+            if not (EventSettings.AutoHatchWarBossTap and AutoTapRunning) then
+                break
+            end
+
+            TeleportToHWBossPosition()
+        end
+    end)
+    -- [END] Loop 3: teleport lại về tọa độ mục tiêu mỗi 5 giây
 end
 
 EventTab:CreateToggle({
