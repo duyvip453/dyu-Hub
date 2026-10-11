@@ -711,11 +711,16 @@ local function StartAutoFarmRankLoop()
                     and IsQuestProgressComplete(latestProgress)
                 local questChanged = latestTitle ~= activeTitle or not latestProgress
 
-                if isFinished or questChanged then
-                    -- Vô hiệu hóa box cũ trước khi reset bảng và chọn nhiệm vụ kế tiếp.
+                local activeState = QuestRankState[activeRank]
+                local handlerStopped = not activeState or not activeState.Running
+
+                if isFinished or questChanged or handlerStopped then
+                    -- Nếu handler tự return/lỗi khi quest vẫn còn, xóa trạng thái cũ
+                    -- để scheduler có thể quét và dispatch lại thay vì kẹt ở ActiveQuest.
                     StopDispatchedQuest(activeRank)
                     activeRank = nil
                     activeTitle = nil
+                    fullPrioritySince = nil
                     ScanAndSortQuestRanks()
                     task.wait(0.1)
                 else
