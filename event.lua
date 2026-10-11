@@ -140,6 +140,23 @@ task.spawn(function()
 end)
 -- [END] Reset EggSlotsMachine BuyMax một lần khi khởi động
 
+-- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
+task.spawn(function()
+    while true do
+        pcall(function()
+            local character = Player.Character or Player.CharacterAdded:Wait()
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+                or character:WaitForChild("Humanoid")
+            if humanoid.Health > 0 then
+                humanoid.Jump = true
+            end
+        end)
+
+        task.wait(300)
+    end
+end)
+-- [END] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
+
 -- [START] Auto Egg: gọi CustomEggs_Hatch với tổng Owned Egg đã quét
 local AutoEggRunning = false
 
@@ -623,7 +640,7 @@ local function StartAutoKnockHouse()
         local originalCFrame = nil
         local wasAwayFromHome = false
 
-        -- Chạy tap/start boss song song, nhưng không teleport đến boss để tránh xung đột với knock.
+        -- Chỉ chạy HW_Boss_Tap song song; không gọi HW_Boss_Start và không teleport đến boss.
         task.spawn(function()
             while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
                 pcall(function()
@@ -632,9 +649,6 @@ local function StartAutoKnockHouse()
                         firesignal(liveCircle.Activated)
                     end
                     tapRemote:FireServer("HatchWar", "HW_Boss_Tap", "circle")
-                end)
-                pcall(function()
-                    invokeRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
                 end)
                 task.wait(0.2)
             end
@@ -721,20 +735,5 @@ if EventSettings.AutoKnockHouse then
 end
 -- [END] Auto Knock House: toggle quét Roll, knock nhà theo thứ tự và tap boss
 
--- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
-task.spawn(function()
-    while true do
-        pcall(function()
-            local character = Player.Character or Player.CharacterAdded:Wait()
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-                or character:WaitForChild("Humanoid")
-            if humanoid.Health > 0 then
-                humanoid.Jump = true
-            end
-        end)
 
-        task.wait(300)
-    end
-end)
--- [END] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 
