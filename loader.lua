@@ -721,23 +721,30 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- Khi rảnh, chỉ chọn nhiệm vụ đầu bảng đã được sắp theo Group priority.
-                local selected = found[1]
-                if not selected then
+                -- Chỉ dispatch khi bảng đã có đủ 4 nhiệm vụ hợp lệ.
+                -- Khi quest vừa hoàn thành/reset, UI có thể tạm thời chỉ hiện 1-3 nhiệm vụ;
+                -- đợi bảng đầy lại để tránh chọn nhầm nhiệm vụ tạm thời chen vào đầu bảng.
+                if #found < 4 then
                     task.wait(0.5)
                 else
-                    local path = QuestRankPaths[selected.Rank]
-                    local currentTitle, currentProgress = GetQuestInfoFromPath(path)
-
-                    -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
-                    if currentTitle == selected.Title
-                        and currentProgress
-                        and not IsQuestProgressComplete(currentProgress) then
-                        activeRank = selected.Rank
-                        activeTitle = selected.Title
-                        DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                    -- Khi đủ 4 dòng, chỉ chọn nhiệm vụ đầu bảng theo Group priority.
+                    local selected = found[1]
+                    if not selected then
+                        task.wait(0.5)
                     else
-                        task.wait(0.1)
+                        local path = QuestRankPaths[selected.Rank]
+                        local currentTitle, currentProgress = GetQuestInfoFromPath(path)
+
+                        -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
+                        if currentTitle == selected.Title
+                            and currentProgress
+                            and not IsQuestProgressComplete(currentProgress) then
+                            activeRank = selected.Rank
+                            activeTitle = selected.Title
+                            DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                        else
+                            task.wait(0.1)
+                        end
                     end
                 end
             end
