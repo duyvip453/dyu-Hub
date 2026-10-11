@@ -548,21 +548,7 @@ local function DispatchQuest(rank, questTitle, questGroup)
         return false, "Nhiệm vụ đã được dispatch"
     end
 
-    -- Chẩn đoán điểm dispatch: in đúng tên box, rank, tiêu đề và progress hiện tại
-    -- trước khi bắt đầu chạy handler.
-    local questPath = QuestRankPaths[rank]
-    local _, progressText
-    if questPath then _, progressText = GetQuestInfoFromPath(questPath) end
-    local current, target = ParseQuestProgress(progressText)
-    print(string.format(
-        "[AutoRank] DISPATCH box=%s rank=%s quest=%s progress=%s count=%s/%s",
-        tostring(questGroup),
-        tostring(rank),
-        tostring(questTitle),
-        tostring(progressText),
-        tostring(current),
-        tostring(target)
-    ))
+    -- Gọi box qua một điểm trung tâm; không log mỗi lần dispatch.
 
     state.Generation = state.Generation + 1
     local generation = state.Generation
@@ -576,7 +562,10 @@ local function DispatchQuest(rank, questTitle, questGroup)
 
         if state.Generation == generation then
             state.Running = false
-            -- El scheduler observa Running=false y decide cuándo volver a despachar.
+            if not ok then
+                SetQuestDebug("box lỗi: " .. tostring(questGroup) .. " / " .. tostring(err))
+            end
+            -- Scheduler observes Running=false and handles the next dispatch.
         end
     end)
     return true
@@ -759,7 +748,10 @@ local function StartAutoFarmRankLoop()
                         task.wait(0.1)
                     else
                         local path = QuestRankPaths[selected.Rank]
-                        local currentTitle, currentProgress = path and GetQuestInfoFromPath(path)
+                        local currentTitle, currentProgress
+                        if path then
+                            currentTitle, currentProgress = GetQuestInfoFromPath(path)
+                        end
 
                         -- Quét và xác minh lại trước dispatch để tránh chạy quest đã đổi.
                         local latestFound = ScanAndSortQuestRanks()
