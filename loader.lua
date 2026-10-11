@@ -424,9 +424,12 @@ local function GetQuestInfoFromPath(path)
         current = current:FindFirstChild(name)
         if not current then return nil, nil end
     end
-    local title = current:FindFirstChild("Title")
-    local progress = current:FindFirstChild("Progress")
+    -- UI của một số rank đặt Title/Progress sâu hơn trong card quest.
+    local title = current:FindFirstChild("Title", true)
+    local progress = current:FindFirstChild("Progress", true)
     if not title or not progress then return nil, nil end
+    if not title:IsA("TextLabel") and not title:IsA("TextButton") then return nil, nil end
+    if not progress:IsA("TextLabel") and not progress:IsA("TextButton") then return nil, nil end
     return title.Text, progress.Text
 end
 local function NormalizeQuestText(value, keepNumbers)
@@ -447,8 +450,9 @@ local QuestMatchRules = {
     -- Any quest containing "legendary" must route to LegendaryEggs,
     -- even if the title does not contain the word "hatch".
     {Group = "LegendaryEggs", AnyKeywords = {"legendary"}},
-    -- Generic egg-hatching quests route to Hollow Egg only when not legendary.
-    {Group = "Eggs", Keywords = {"hatch"}, ExcludeKeywords = {"legendary"}},
+    -- Egg quest titles can vary: "Hatch ... eggs", "Hatch ... of your best eggs", etc.
+    -- Route by hatch OR egg/eggs wording, excluding legendary quests handled above.
+    {Group = "Eggs", AnyKeywords = {"hatch", "egg", "eggs"}, ExcludeKeywords = {"legendary"}},
     {Group = "Use", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchant"}, MatchAll = true},
@@ -630,10 +634,12 @@ local function ScanAndSortQuestRanks()
     for scanOrder, rank in ipairs(RankScanOrder) do
         local path = QuestRankPaths[rank]
         local ok, title, progress = pcall(GetQuestInfoFromPath, path)
-        if ok and title and title ~= "" and progress and not IsQuestProgressComplete(progress) then
+        if ok and title and title ~= "" and progress then
             local group = IdentifyQuestGroup(title)
             local priority = group and QuestGroupPriority[group]
-            if group and priority then
+            -- Chỉ loại quest khi parser đọc được target và xác nhận đã hoàn thành.
+            -- Progress lạ/viết tắt không được xem là hoàn thành, tránh làm mất egg quest.
+            if group and priority and not IsQuestProgressComplete(progress) then
                 table.insert(found, {
                     Rank = rank,
                     Title = title,
