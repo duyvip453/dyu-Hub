@@ -276,7 +276,7 @@ if EventSettings.AutoHatchWarBossTap then
 end
 -- [END] Auto HW Boss: LiveCircle + Tap remote + Boss Start remote
 
--- [START] Auto Knock House: nhảy mỗi 5 phút
+-- [START] Auto Knock House: nhảy ngay khi bật, sau đó mỗi 5 phút để hạn chế AFK
 local AutoJumpRunning = false
 
 local function StartAutoJump()
@@ -284,14 +284,22 @@ local function StartAutoJump()
     AutoJumpRunning = true
 
     task.spawn(function()
-        while EventSettings.AutoJump and AutoJumpRunning do
+        while AutoJumpRunning and EventSettings.AutoJump do
             pcall(function()
                 local character = Player.Character or Player.CharacterAdded:Wait()
-                local humanoid = character:WaitForChild("Humanoid")
-                humanoid.Jump = true
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    or character:WaitForChild("Humanoid")
+                if humanoid.Health > 0 then
+                    humanoid.Jump = true
+                end
             end)
 
-            task.wait(300)
+            local elapsed = 0
+            while elapsed < 300 and AutoJumpRunning and EventSettings.AutoJump do
+                local step = math.min(1, 300 - elapsed)
+                task.wait(step)
+                elapsed = elapsed + step
+            end
         end
 
         AutoJumpRunning = false
@@ -316,5 +324,5 @@ EventTab:CreateToggle({
 if EventSettings.AutoJump then
     StartAutoJump()
 end
--- [END] Auto Knock House: nhảy mỗi 5 phút
+-- [END] Auto Knock House: nhảy ngay khi bật, sau đó mỗi 5 phút để hạn chế AFK
 
