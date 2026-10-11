@@ -893,82 +893,48 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
 end
 -- [END] Box CollectPotions
 
--- [START] Box CollectEnchants: kiểm tra progress và gọi remote mỗi 0,5 giây
+-- [START] Box CollectEnchants: gọi mỗi 0,5 giây đến khi quest/priority dừng
 QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
-    local state = QuestRankState[rank]
+    local state, attempts = QuestRankState[rank], 0
     local function debug(message)
         if state then state.LastHandlerStatus = tostring(message) end
         SetQuestDebug(rank .. " / CollectEnchants / " .. tostring(message))
         print("[CollectEnchants] " .. tostring(message))
     end
 
-    if not isEnabled() then debug("đã bị priority/quest state dừng trước khi chạy"); return end
-
-    local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries
-    if type(entries) ~= "table" or #entries == 0 then
-        debug("registry enchant rỗng hoặc chưa tải"); return
-    end
-
-    -- Giữ nguyên cơ chế test độc lập: chỉ dùng ID hợp lệ, xoay vòng từng ID,
-    -- gửi amount=1, và ghi log cả request lẫn response.
-    local usableEntries = {}
+    if not isEnabled() then return end
+    local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries or {}
+    local usable = {}
     for _, entry in ipairs(entries) do
         if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
-            table.insert(usableEntries, entry)
+            usable[#usable + 1] = entry
         end
     end
-    if #usableEntries == 0 then debug("không có ID enchant hợp lệ"); return end
+    if #usable == 0 then debug("không có ID enchant hợp lệ / registry rỗng"); return end
 
     local network = ReplicatedStorage:FindFirstChild("Network")
-    local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
-    local remote = network and network:FindFirstChild(remoteName)
-    if not remote or not remote:IsA("RemoteFunction") then
-        debug("không tìm thấy RemoteFunction " .. tostring(remoteName)); return
-    end
+    local remote = network and network:FindFirstChild(EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate")
+    local path = QuestRankPaths[rank]
+    if not remote or not remote:IsA("RemoteFunction") then debug("không tìm thấy RemoteFunction"); return end
+    if not path then debug("không có QuestRankPaths cho rank"); return end
 
-    local questPath = QuestRankPaths[rank]
-    if not questPath then debug("không có QuestRankPaths cho rank"); return end
-
-    local attempts = 0
-    debug("bắt đầu quest=" .. tostring(questTitle) .. " rank=" .. tostring(rank))
     while isEnabled() do
-        -- Đọc lại UI mỗi vòng; nếu quest đổi hoặc đã đủ progress thì dừng.
-        local currentTitle, progressText = GetQuestInfoFromPath(questPath)
-        if currentTitle ~= questTitle or not progressText then
-            debug("UI quest không khớp: " .. tostring(currentTitle) .. " / " .. tostring(progressText))
-            return
-        end
+        local title, progress = GetQuestInfoFromPath(path)
+        if title ~= questTitle or not progress then debug("UI quest không khớp: " .. tostring(title) .. " / " .. tostring(progress)); return end
+        local current, target = ParseQuestProgress(progress)
+        if not current or not target or target <= 0 then debug("không parse được progress: " .. tostring(progress)); return end
+        if current >= target then debug("quest hoàn thành " .. tostring(progress)); return end
 
-        local current, target = ParseQuestProgress(progressText)
-        if not current or not target or target <= 0 then
-            debug("không parse được progress: " .. tostring(progressText))
-            return
-        end
-        if current >= target then
-            debug("quest hoàn thành " .. tostring(progressText))
-            return
-        end
-
-        local entry = usableEntries[(attempts % #usableEntries) + 1]
+        local entry = usable[(attempts % #usable) + 1]
         if not isEnabled() then return end
         attempts = attempts + 1
-        print(string.format(
-            "[CollectEnchants] INVOKE quest=%s rank=%s enchant=%s id=%s amount=1 progress=%s",
-            tostring(questTitle),
-            tostring(rank),
-            tostring(entry.Enchant or "unknown"),
-            tostring(entry.Id),
-            tostring(progressText)
-        ))
+        print(string.format("[CollectEnchants] INVOKE quest=%s rank=%s enchant=%s id=%s amount=1 progress=%s",
+            tostring(questTitle), tostring(rank), tostring(entry.Enchant or "unknown"), tostring(entry.Id), tostring(progress)))
 
-        local ok, result = pcall(function()
-            return remote:InvokeServer(entry.Id, 1)
-        end)
+        local ok, result = pcall(function() return remote:InvokeServer(entry.Id, 1) end)
         local resultText = ok and tostring(result) or ("remote error: " .. tostring(result))
         print(string.format("[CollectEnchants] RESULT ok=%s result=%s", tostring(ok), resultText))
-        debug(progressText .. " | request " .. tostring(attempts) .. " | " .. tostring(entry.Enchant or entry.Id) .. " | " .. resultText)
-
-        -- Chu kỳ 0,5 giây; isEnabled() cho phép priority/scheduler ép dừng.
+        debug(progress .. " | request " .. attempts .. " | " .. tostring(entry.Enchant or entry.Id) .. " | " .. resultText)
         task.wait(0.5)
     end
     debug("handler đã bị priority/scheduler dừng")
