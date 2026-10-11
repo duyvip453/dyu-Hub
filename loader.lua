@@ -344,25 +344,32 @@ local function RefreshMaxEggHatchAmount()
     local totalEggs = 0
     local foundOwnedSlot = false
 
-    -- Mỗi OwnedSlot có Title dạng "+N Egg"; LockedSlot được tự động bỏ qua.
-    for _, slot in ipairs(slotsContainer:GetDescendants()) do
-        if slot.Name == "OwnedSlot" then
-            local title = slot:FindFirstChild("Title", true)
-            if title and title:IsA("TextLabel") then
-                local amountText = tostring(title.Text or "")
-                local amount = tonumber(amountText:match("%+(%d+)%s*[Ee]gg"))
-                    or tonumber(amountText:match("%+(%d+)"))
-                if amount and amount > 0 then
-                    totalEggs = totalEggs + math.floor(amount)
-                    foundOwnedSlot = true
-                end
-            end
+    -- Quét tất cả OwnedSlot và cộng số trứng của từng slot đang sở hữu.
+    -- Giá trị này là giới hạn hatch tối đa, tuyệt đối không lấy số còn thiếu của quest.
+    local function ReadOwnedSlot(slot)
+        if not slot or slot.Name ~= "OwnedSlot" then return end
+        local title = slot:FindFirstChild("Title", true)
+        if not title or not title:IsA("TextLabel") then return end
+
+        local amountText = tostring(title.Text or ""):gsub(",", "")
+        local amount = tonumber(amountText:match("%+(%d+)%s*[Ee]ggs?"))
+            or tonumber(amountText:match("%+(%d+)"))
+        if amount and amount > 0 then
+            totalEggs = totalEggs + math.floor(amount)
+            foundOwnedSlot = true
         end
     end
 
-    -- Chỉ cập nhật khi đã đọc được ít nhất một OwnedSlot hợp lệ,
-    -- tránh đặt amount về 0 nếu UI machine chưa tải xong.
-    if foundOwnedSlot then
+    -- Bao gồm cả trường hợp OwnedSlot nằm ngay trong container, không chỉ descendants.
+    for _, slot in ipairs(slotsContainer:GetChildren()) do
+        ReadOwnedSlot(slot)
+    end
+    for _, slot in ipairs(slotsContainer:GetDescendants()) do
+        ReadOwnedSlot(slot)
+    end
+
+    -- Nếu UI chưa tải hoặc đang trống, giữ nguyên giá trị tốt gần nhất.
+    if foundOwnedSlot and totalEggs > 0 then
         CurrentMaxEggHatchAmount = math.max(1, totalEggs)
     end
 
@@ -397,14 +404,16 @@ local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, 
         if stopWhenReady and stopWhenReady() then
                         return true
         end
-        local amount = RefreshMaxEggHatchAmount()
-        local success, result = pcall(function()
-            return remote:InvokeServer(eggName, amount)
+        -- Mỗi lượt đều lấy lại giới hạn hatch tối đa từ OwnedSlot.
+        -- Không giảm amount theo số trứng còn thiếu của quest; scanner chỉ chịu trách nhiệm dừng box.
+        local amount = math.max(1, RefreshMaxEggHatchAmount())
+        local success = pcall(function()
+            remote:InvokeServer(eggName, amount)
         end)
         if not success then
-                        task.wait(1)
+            task.wait(1)
         else
-                        task.wait(0.75)
+            task.wait(0.5)
         end
     end
     return false
