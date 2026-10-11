@@ -506,13 +506,27 @@ local function IdentifyQuestGroup(questTitle)
 end
 
 local function ParseQuestProgress(progressText)
-    local text = tostring(progressText or ""):gsub(",", "")
-    local current, target = text:match("(%d+)%s*/%s*(%d+)")
-    if not current or not target then
-        current, target = text:match("(%d+)%s+of%s+(%d+)")
+    local text = tostring(progressText or ""):lower():gsub(",", "")
+    local function ParseCount(value)
+        if not value then return nil end
+        value = value:gsub("%s+", "")
+        local number, suffix = value:match("^(%d+%.?%d*)([km]?)$")
+        number = tonumber(number)
+        if not number then return nil end
+        if suffix == "k" then number = number * 1000 end
+        if suffix == "m" then number = number * 1000000 end
+        return math.floor(number + 0.5)
     end
+
+    -- Hỗ trợ cả dạng 43/1500, 43/1.5k và 43 of 1.5k.
+    local currentText, targetText = text:match("([%d%.]+%s*[km]?)%s*/%s*([%d%.]+%s*[km]?)")
+    if not currentText or not targetText then
+        currentText, targetText = text:match("([%d%.]+%s*[km]?)%s+of%s+([%d%.]+%s*[km]?)")
+    end
+    local current = ParseCount(currentText)
+    local target = ParseCount(targetText)
     if not current or not target then return nil, nil end
-    return tonumber(current), tonumber(target)
+    return current, target
 end
 
 local function IsQuestProgressComplete(progressText)
@@ -676,6 +690,7 @@ local function StartAutoFarmRankLoop()
         task.wait(1)
         local activeRank = nil
         local activeTitle = nil
+        local fullPrioritySince = nil
 
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
             -- Quét toàn bộ rank liên tục; hàm tự reset bảng rồi điền kết quả mới.
@@ -701,25 +716,35 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- Không bắt buộc đủ 4 nhiệm vụ: nếu một rank chưa tải hoặc một quest
-                -- chưa được nhận diện, vẫn phải tiếp tục với nhiệm vụ hợp lệ đang có.
-                -- ScanAndSortQuestRanks đã sắp xếp theo ưu tiên; xác minh lại trước khi dispatch.
-                local selected = found[1]
-                if not selected then
+                -- Chỉ dispatch khi bảng priority có đủ đúng 4 nhiệm vụ liên tục ít nhất 0,5 giây.
+                -- Nếu thiếu bất kỳ nhiệm vụ nào, xóa bộ đếm và tiếp tục scan cho đến khi đủ 4.
+                if #found ~= 4 then
+                    fullPrioritySince = nil
                     task.wait(0.5)
                 else
-                    local path = QuestRankPaths[selected.Rank]
-                    local currentTitle, currentProgress = GetQuestInfoFromPath(path)
-
-                    -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
-                    if currentTitle == selected.Title
-                        and currentProgress
-                        and not IsQuestProgressComplete(currentProgress) then
-                        activeRank = selected.Rank
-                        activeTitle = selected.Title
-                        DispatchQuest(selected.Rank, selected.Title, selected.Group)
-                    else
+                    if not fullPrioritySince then
+                        fullPrioritySince = os.clock()
+                        task.wait(0.5)
+                    elseif os.clock() - fullPrioritySince < 0.5 then
                         task.wait(0.1)
+                    else
+                        local selected = found[1]
+                        local path = selected and QuestRankPaths[selected.Rank]
+                        local currentTitle, currentProgress = path and GetQuestInfoFromPath(path)
+
+                        -- Xác minh lại tiêu đề và progress ngay trước khi gọi box.
+                        if selected
+                            and currentTitle == selected.Title
+                            and currentProgress
+                            and not IsQuestProgressComplete(currentProgress) then
+                            activeRank = selected.Rank
+                            activeTitle = selected.Title
+                            fullPrioritySince = nil
+                            DispatchQuest(selected.Rank, selected.Title, selected.Group)
+                        else
+                            fullPrioritySince = nil
+                            task.wait(0.1)
+                        end
                     end
                 end
             end
