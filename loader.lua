@@ -887,16 +887,15 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
 
         local current, target = ParseQuestProgress(progressText)
         if not current or not target or target <= 0 or current >= target then return end
-        local amountRemaining = math.max(1, math.floor(target - current))
-
-        -- Gửi số lượng còn thiếu trong một lần gọi, thay vì gọi 1 món mỗi giây.
+        -- Máy nâng cấp enchant dùng cùng dạng gọi đã có ở box UpdateEnchant:
+        -- mỗi request chỉ gửi 1 enchant; lặp lại để UI/server kịp cập nhật progress.
         local entry = usableEntries[math.random(1, #usableEntries)]
         if not isEnabled() then return end
         local ok = pcall(function()
-            remote:InvokeServer(entry.Id, amountRemaining)
+            remote:InvokeServer(entry.Id, 1)
         end)
 
-        -- Nếu remote thất bại thì đợi lâu hơn; nếu thành công chờ progress cập nhật.
+        -- Chờ cập nhật sau mỗi enchant; lỗi request thì nghỉ lâu hơn rồi thử lại.
         task.wait(ok and 0.5 or 1)
     end
 end
