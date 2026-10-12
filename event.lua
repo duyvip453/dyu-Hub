@@ -1,4 +1,5 @@
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = game:GetService("Players").LocalPlayer
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 
@@ -134,12 +135,19 @@ local function StartAutoEgg()
         local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
         local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
 
+        print("[Auto Egg] Đã bắt đầu; remote CustomEggs_Hatch đã tìm thấy.")
+
         while EventSettings.AutoEgg and AutoEggRunning do
-            pcall(function()
+            local ok, err = pcall(function()
                 local amount = RefreshMaxEggHatchAmount()
                 hatchRemote:InvokeServer("af4dc46aa70442d8bd56e76df3dd76da", amount)
             end)
-            task.wait(0.5)
+            if not ok then
+                warn("[Auto Egg] Gọi CustomEggs_Hatch thất bại: " .. tostring(err))
+                task.wait(1)
+            else
+                task.wait(0.5)
+            end
         end
 
         AutoEggRunning = false
