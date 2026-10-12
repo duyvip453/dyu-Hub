@@ -305,7 +305,7 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
     if not requested or requested < 1 then return end
     requested = math.floor(requested)
 
-    local targetUID = "f69b09dd148145e19181cbb9d7ff31a1"
+    local targetUID = "9e51a46a5d9f4c7ba4531dbde4493964"
     local network = ReplicatedStorage:FindFirstChild("Network")
     local remote = network and network:FindFirstChild("GoldMachine_Activate")
     if not remote or not remote:IsA("RemoteFunction") or not isEnabled() then return end
@@ -327,7 +327,7 @@ QuestScriptBoxes.MakeRainbow = function(questTitle, rank, isEnabled)
     local network = ReplicatedStorage:FindFirstChild("Network")
     local rainbowRemote = network and network:FindFirstChild("RainbowMachine_Activate")
     local goldenRemote = network and network:FindFirstChild("GoldMachine_Activate")
-    local rainbowUID = "192c592642a445c8963250710c12bf69"
+    local rainbowUID = "8e5a8498703f4562a5dfbc6359b43528"
     local goldenUID = "f69b09dd148145e19181cbb9d7ff31a1"
 
     if not questPath or not rainbowRemote or not rainbowRemote:IsA("RemoteFunction")
