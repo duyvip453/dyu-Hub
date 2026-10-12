@@ -300,7 +300,8 @@ EventTab:CreateToggle({
 if EventSettings.AutoEgg then
     StartAutoEgg()
 end
--- [END] Auto Egg: lấy vị trí egg + Break Zone động, teleport một lần rồi hatch-- [START] Auto HW Boss Tap
+-- [END] Auto Egg: lấy vị trí egg + Break Zone động, teleport một lần rồi hatch
+-- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
 local function StartAutoHWTap()
