@@ -386,7 +386,6 @@ end
 local AutoUnlockRunning = false
 local HouseUnlockStates = {}
 local HouseUnlockPrices = {}
-local HousePriceConnections = {}
 local UnlockItemUID = "451067eb4fc14e64bf64aa8f755dfe08"
 
 -- Tọa độ đứng tại từng căn nhà khi thực hiện Unlock
@@ -495,17 +494,8 @@ local function ReadHousePriceFromDoor(hatchWar, houseNumber)
     return ParseUnlockNumber(amount.Text)
 end
 
-local function ClearHousePriceConnections()
-    for _, connection in pairs(HousePriceConnections) do
-        pcall(function() connection:Disconnect() end)
-    end
-    table.clear(HousePriceConnections)
-end
-
--- Chỉ gọi lúc bật Auto Unlock: chụp màu/trạng thái và giá ban đầu đúng một lần.
--- Sau đó giá được cập nhật qua GetPropertyChangedSignal("Text"), không quét lại cây nhà.
+-- Chỉ gọi lúc bật Auto Unlock: chụp trạng thái màu và giá của cả 8 nhà một lần.
 local function InitializeHouseUnlockCache()
-    ClearHousePriceConnections()
     table.clear(HouseUnlockStates)
     table.clear(HouseUnlockPrices)
 
@@ -535,20 +525,12 @@ local function InitializeHouseUnlockCache()
 
         if amountLabel and (amountLabel:IsA("TextLabel") or amountLabel:IsA("TextButton")) then
             HouseUnlockPrices[houseNumber] = ParseUnlockNumber(amountLabel.Text)
-            HousePriceConnections[houseNumber] = amountLabel:GetPropertyChangedSignal("Text"):Connect(function()
-                local newPrice = ParseUnlockNumber(amountLabel.Text)
-                if newPrice ~= nil then
-                    local oldPrice = HouseUnlockPrices[houseNumber]
-                    HouseUnlockPrices[houseNumber] = newPrice
-                    if oldPrice ~= newPrice then
-                        print("[Auto Unlock] Cache giá nhà " .. houseNumber .. ": "
-                            .. tostring(oldPrice) .. " -> " .. tostring(newPrice))
-                    end
-                end
-            end)
+        else
+            HouseUnlockPrices[houseNumber] = nil
+            warn("[Auto Unlock] Không tìm thấy Text giá nhà " .. houseNumber .. " khi khởi tạo.")
         end
     end
-    print("[Auto Unlock] Đã cache trạng thái 8 nhà; không quét lại màu nhà trong vòng lặp.")
+    print("[Auto Unlock] Đã cache trạng thái và giá 8 nhà; không quét lại nhà trong vòng lặp.")
     return true
 end
 
@@ -646,7 +628,6 @@ local function StartAutoUnlock()
             task.wait(0.2)
         end
 
-        ClearHousePriceConnections()
         AutoUnlockPending = false
         AutoUnlockRunning = false
     end)
@@ -662,7 +643,6 @@ EventTab:CreateToggle({
             StartAutoUnlock()
         else
             AutoUnlockRunning = false
-            ClearHousePriceConnections()
         end
     end
 })
