@@ -245,6 +245,83 @@ end)
 
 
 
+-- [START] Auto Update Egg slot và Pet slot
+local AutoUpdateEgg = Settings.AutoUpdateEgg
+local AutoUpdatePet = Settings.AutoUpdatePet
+
+local function RunEggUpdater()
+    task.spawn(function()
+        local network = ReplicatedStorage:WaitForChild("Network")
+        local remote = network:WaitForChild("EggHatchSlotsMachine_RequestPurchase")
+
+        while AutoUpdateEgg do
+            for id = 1, 60 do
+                if not AutoUpdateEgg then
+                    break
+                end
+                pcall(function()
+                    remote:InvokeServer(id)
+                end)
+                task.wait(0.5)
+            end
+        end
+    end)
+end
+
+local function RunPetUpdater()
+    task.spawn(function()
+        local network = ReplicatedStorage:WaitForChild("Network")
+        local remote = network:WaitForChild("EquipSlotsMachine_RequestPurchase")
+
+        while AutoUpdatePet do
+            for id = 1, 60 do
+                if not AutoUpdatePet then
+                    break
+                end
+                pcall(function()
+                    remote:InvokeServer(id)
+                end)
+                task.wait(0.5)
+            end
+        end
+    end)
+end
+
+Tab1:CreateToggle({
+    Name = "Auto Update Egg slot",
+    CurrentValue = AutoUpdateEgg,
+    Callback = function(Value)
+        AutoUpdateEgg = Value
+        Settings.AutoUpdateEgg = Value
+        SaveConfig()
+        if Value then
+            RunEggUpdater()
+        end
+    end
+})
+
+Tab1:CreateToggle({
+    Name = "Auto Update pet slot",
+    CurrentValue = AutoUpdatePet,
+    Callback = function(Value)
+        AutoUpdatePet = Value
+        Settings.AutoUpdatePet = Value
+        SaveConfig()
+        if Value then
+            RunPetUpdater()
+        end
+    end
+})
+
+if AutoUpdateEgg then
+    RunEggUpdater()
+end
+if AutoUpdatePet then
+    RunPetUpdater()
+end
+--endslot
+-- [END] Auto Update Egg slot và Pet slot
+
 -- [START] Auto Farm Quest: cấu hình rank, đọc UI, phân loại và điều phối nhiệm vụ
 -- KIẾN TRÚC HIỆN TẠI: 4 toggle Easy/Medium/Hard/Extreme chỉ là công tắc TEST theo rank.
 -- KIẾN TRÚC ĐÍCH: một toggle Auto Rank duy nhất -> đọc nhiệm vụ mọi rank -> IdentifyQuestGroup
