@@ -312,6 +312,7 @@ QuestScriptBoxes.MakeGolden = function(questTitle, rank, isEnabled)
 
     pcall(function()
         remote:InvokeServer(targetUID, requested)
+    end)
 end
 -- [END] Box MakeGolden
 
@@ -413,5 +414,7 @@ QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
             remote:InvokeServer(entry.Id, 1)
         end)
         task.wait(1)
+    end
+end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
