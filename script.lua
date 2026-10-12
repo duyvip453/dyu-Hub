@@ -71,52 +71,104 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
             usable[#usable + 1] = entry
         end
     end
-    if #usable == 0 then return end
+    if #usable == 0 then
+        SetQuestDebug("CollectEnchants: registry không có ID hợp lệ")
+        return
+    end
 
     local network = ReplicatedStorage:FindFirstChild("Network")
-    local remote = network and network:FindFirstChild(
-        EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
-    )
-    if not remote or not remote:IsA("RemoteFunction") then return end
+    local remoteName = EnchantUpgradeIDs.MachineRemote or "UpgradeEnchantsMachine_Activate"
+    local remote = network and network:FindFirstChild(remoteName)
+    if not remote or not remote:IsA("RemoteFunction") then
+        SetQuestDebug("CollectEnchants: không tìm thấy RemoteFunction " .. remoteName)
+        return
+    end
 
-    local questPath = QuestRankPaths[rank]
-    if not questPath then return end
-
-    while isEnabled() do
-        -- Chỉ tiếp tục nếu vẫn đúng nhiệm vụ; lấy progress hiện tại để tính số còn thiếu.
-        local currentTitle, progressText = GetQuestInfoFromPath(questPath)
-        if currentTitle ~= questTitle or not progressText then return end
-
-        local current, target = ParseQuestProgress(progressText)
-        if not current or not target or target <= 0 or current >= target then return end
-        local amountRemaining = math.max(1, math.floor(target - current))
-
-        local entry = usable[math.random(1, #usable)]
-        if not isEnabled() then return end
-
-        local ok, result = pcall(function()
-            return remote:InvokeServer(entry.Id, amountRemaining)
-        end)
-        if not ok then
-            SetQuestDebug("CollectEnchants: remote lỗi: " .. tostring(result))
-        elseif result == false then
-            -- Remote có thể từ chối batch mà không ném lỗi Lua.
-            -- Thử lại đúng ID với số lượng 1 để tránh đứng tiến độ nếu batch không được hỗ trợ.
-            SetQuestDebug("CollectEnchants: batch bị từ chối; thử số lượng 1")
-            if not isEnabled() then return end
-            local retryOk, retryResult = pcall(function()
-                return remote:InvokeServer(entry.Id, 1)
-            end)
-            if not retryOk then
-                SetQuestDebug("CollectEnchants: retry lỗi: " .. tostring(retryResult))
-            elseif retryResult == false then
-                SetQuestDebug("CollectEnchants: server từ chối cả số lượng 1")
-                task.wait(1)
+    -- Tìm quest theo tên trên tất cả rank mỗi vòng; quest có thể chuyển vị trí/rank.
+    local function ReadCurrentQuest()
+        for questRank, path in pairs(QuestRankPaths) do
+            local title, progress = GetQuestInfoFromPath(path)
+            if title == questTitle and progress then
+                return questRank, progress
             end
         end
+        return nil, nil
+    end
 
-        -- Đợi UI cập nhật rồi đọc lại progress; chỉ gửi batch mới nếu quest vẫn còn thiếu.
-        task.wait(0.5)
+    -- Mỗi lượt thử các ID ngẫu nhiên không lặp cho đến khi progress đổi.
+    -- Không lọc theo Enchant/Tier vì yêu cầu là thử mọi ID trong registry.
+    local attempted = {}
+    local attemptedCount = 0
+
+    while isEnabled() do
+        local currentRank, progressText = ReadCurrentQuest()
+        if not currentRank then
+            SetQuestDebug("CollectEnchants: đang tìm quest ở các rank")
+            task.wait(0.5)
+        else
+            local current, target = ParseQuestProgress(progressText)
+            if not current or not target or target <= 0 then
+                SetQuestDebug("CollectEnchants: không đọc được progress: " .. tostring(progressText))
+                task.wait(0.5)
+            elseif current >= target then
+                SetQuestDebug("CollectEnchants: nhiệm vụ hoàn thành")
+                return
+            else
+                local amountRemaining = math.max(1, math.floor(target - current))
+                if attemptedCount >= #usable then
+                    -- Một vòng đủ mọi ID nhưng chưa có tiến độ; bắt đầu vòng mới.
+                    attempted = {}
+                    attemptedCount = 0
+                end
+
+                local candidates = {}
+                for _, entry in ipairs(usable) do
+                    if not attempted[entry.Id] then
+                        candidates[#candidates + 1] = entry
+                    end
+                end
+
+                if #candidates == 0 then
+                    attempted = {}
+                    attemptedCount = 0
+                    task.wait(0.5)
+                else
+                    local entry = candidates[math.random(1, #candidates)]
+                    attempted[entry.Id] = true
+                    attemptedCount = attemptedCount + 1
+
+                    if not isEnabled() then return end
+                    local ok, result = pcall(function()
+                        return remote:InvokeServer(entry.Id, amountRemaining)
+                    end)
+                    if not ok then
+                        SetQuestDebug("CollectEnchants: lỗi gọi remote với ID " .. entry.Id .. ": " .. tostring(result))
+                    elseif result == false then
+                        -- Batch bị từ chối: thử cùng ID với 1; nếu vẫn không tiến độ,
+                        -- vòng sau sẽ chọn một ID khác chưa thử.
+                        if isEnabled() then
+                            local retryOk, retryResult = pcall(function()
+                                return remote:InvokeServer(entry.Id, 1)
+                            end)
+                            if not retryOk then
+                                SetQuestDebug("CollectEnchants: retry ID " .. entry.Id .. " lỗi: " .. tostring(retryResult))
+                            elseif retryResult == false then
+                                SetQuestDebug("CollectEnchants: ID bị từ chối, chuyển ID khác")
+                            end
+                        end
+                    end
+
+                    task.wait(0.5)
+                    -- Nếu tiến độ thay đổi, bắt đầu vòng ID mới với amount cập nhật.
+                    local _, newProgressText = ReadCurrentQuest()
+                    local newCurrent, newTarget = ParseQuestProgress(newProgressText)
+                    if newCurrent and newTarget and (newCurrent ~= current or newTarget ~= target) then
+                        attempted = {}
+                        attemptedCount = 0
+                    end
+                end
+            end
+        end
     end
 end
 -- [END] Box CollectEnchants
