@@ -455,21 +455,21 @@ local function StartAutoUnlock()
         local dropInfoReady = false
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
-            -- DropInfo vắng mặt nghĩa là đang đánh boss; không mở khóa khi đó.
-            if not IsBossFightActive() then
+            -- Đường dẫn HW_BossScore tồn tại nghĩa là đang đánh boss: tuyệt đối không mở nhà.
+            if IsBossFightActive() then
                 dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
                 continue
             end
 
-            -- Chờ 1 giây một lần khi DropInfo vừa xuất hiện.
+            -- Chờ 1 giây khi boss vừa kết thúc trước khi bắt đầu thao tác nhà.
             if not dropInfoReady then
                 dropInfoReady = true
                 AutoBossPausedForHouseAction = true
                 task.wait(1)
                 if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
-                if not IsBossFightActive() then
+                if IsBossFightActive() then
                     dropInfoReady = false
                     AutoBossPausedForHouseAction = false
                     task.wait(0.2)
@@ -507,14 +507,20 @@ local function StartAutoUnlock()
                     local originalCFrame = root.CFrame
                     local housePosition = HouseUnlockPositions[targetHouse]
 
-                    if housePosition then
+                    if housePosition and not IsBossFightActive() then
                         local teleported = pcall(function()
+                            if IsBossFightActive() then return end
                             root.CFrame = CFrame.new(housePosition)
                         end)
 
-                        if teleported then
+                        if teleported and not IsBossFightActive() then
                             task.wait(0.25)
+                            if IsBossFightActive() then
+                                task.wait(0.2)
+                                continue
+                            end
                             local unlockOk, unlockResult = pcall(function()
+                                if IsBossFightActive() then return end
                                 return unlockRemote:InvokeServer("HatchWar", "HW_Doors_Unlock", targetHouse)
                             end)
                             if not unlockOk then
@@ -522,13 +528,17 @@ local function StartAutoUnlock()
                             end
                             task.wait(0.25)
 
-                            -- Trở về vị trí ban đầu sau khi gửi lệnh mở khóa.
-                            pcall(function()
-                                local currentCharacter = Player.Character or Player.CharacterAdded:Wait()
-                                local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
-                                    or currentCharacter:WaitForChild("HumanoidRootPart")
-                                currentRoot.CFrame = originalCFrame
-                            end)
+                            -- Không teleport về vị trí cũ nếu boss vừa bắt đầu.
+                            if not IsBossFightActive() then
+                                pcall(function()
+                                    local currentCharacter = Player.Character or Player.CharacterAdded:Wait()
+                                    local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
+                                        or currentCharacter:WaitForChild("HumanoidRootPart")
+                                    if not IsBossFightActive() then
+                                        currentRoot.CFrame = originalCFrame
+                                    end
+                                end)
+                            end
 
                             -- Chờ trạng thái căn vừa xử lý cập nhật rồi mới quét chọn căn tiếp theo.
                             -- Tránh gọi Unlock lặp liên tục vào cùng một căn khi server cập nhật chậm.
@@ -653,21 +663,21 @@ local function StartAutoKnockHouse()
         local dropInfoReady = false
 
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
-            -- DropInfo vắng mặt nghĩa là đang đánh boss; không knock khi đó.
-            if not IsBossFightActive() then
+            -- Đường dẫn HW_BossScore tồn tại nghĩa là đang đánh boss: không được teleport/knock.
+            if IsBossFightActive() then
                 dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
                 continue
             end
 
-            -- Chờ 1 giây một lần khi DropInfo vừa xuất hiện.
+            -- Chờ 1 giây sau khi boss kết thúc rồi mới thao tác nhà.
             if not dropInfoReady then
                 dropInfoReady = true
                 AutoBossPausedForHouseAction = true
                 task.wait(1)
                 if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
-                if not IsBossFightActive() then
+                if IsBossFightActive() then
                     dropInfoReady = false
                     AutoBossPausedForHouseAction = false
                     task.wait(0.2)
@@ -698,14 +708,18 @@ local function StartAutoKnockHouse()
 
                 for _, houseNumber in ipairs(rollHouses) do
                     if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
+                    if IsBossFightActive() then break end
 
-                    -- Quét lại ngay trước khi knock để tránh knock nhà đã hết Roll.
+                    -- Kiểm tra lại ngay trước teleport và trước remote.
                     local _, currentHatchWar = GetHatchWarHouses()
                     local currentText = ReadHouseRollText(currentHatchWar, houseNumber)
-                    if currentText and string.find(string.lower(currentText), "roll", 1, true) then
+                    if currentText and string.find(string.lower(currentText), "roll", 1, true)
+                        and not IsBossFightActive() then
                         if TeleportToHouse(houseNumber) then
                             task.wait(0.15)
+                            if IsBossFightActive() then break end
                             local ok, result = pcall(function()
+                                if IsBossFightActive() then return end
                                 return invokeRemote:InvokeServer("HatchWar", "HW_Doors_Knock", houseNumber)
                             end)
                             if not ok then
@@ -718,8 +732,8 @@ local function StartAutoKnockHouse()
                     end
                 end
 
-                -- Sau khi knock hết các nhà đang Roll, trở về vị trí ban đầu.
-                if originalCFrame then
+                -- Nếu boss bắt đầu giữa chu kỳ, không teleport thêm kể cả về vị trí cũ.
+                if originalCFrame and not IsBossFightActive() then
                     pcall(function()
                         local character = Player.Character or Player.CharacterAdded:Wait()
                         local root = character:FindFirstChild("HumanoidRootPart")
