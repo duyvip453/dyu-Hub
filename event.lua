@@ -167,49 +167,70 @@ task.spawn(function()
     end
 end)
 
--- [START] Auto Egg: teleport một lần, tìm ID trứng theo WorldPivot rồi hatch theo GetMaxHatch()
+-- [START] Auto Egg: lấy vị trí egg + Break Zone động, teleport một lần rồi hatch
 local AutoEggRunning = false
 local AutoEggTeleported = false
-
-local AutoEggTeleportPosition = Vector3.new(7536.7568359375, 16.33778953552246, 21966.52734375)
-local AutoEggWorldPivotPosition = Vector3.new(7537.25, 21.3670044, 21939.1797)
 local AutoEggEggId = nil
 
-local function TeleportToAutoEggOnce()
-    if AutoEggTeleported then return true end
+local function GetAutoEggTargets()
+    local things = workspace:FindFirstChild("__THINGS")
+    local eggsFolder = things and things:FindFirstChild("CustomEggs")
+    local instanceContainer = things and things:FindFirstChild("__INSTANCE_CONTAINER")
+    local active = instanceContainer and instanceContainer:FindFirstChild("Active")
+    local hatchWar = active and active:FindFirstChild("HatchWar")
+    local zoneGround = hatchWar and hatchWar:FindFirstChild("ZONE_GROUND")
+    local zone = zoneGround and zoneGround:FindFirstChild("6")
 
-    local ok, err = pcall(function()
-        local character = Player.Character or Player.CharacterAdded:Wait()
-        local root = character:FindFirstChild("HumanoidRootPart")
-            or character:WaitForChild("HumanoidRootPart")
-        root.CFrame = CFrame.new(AutoEggTeleportPosition)
-    end)
-
-    if ok then
-        AutoEggTeleported = true
-        print("[Auto Egg] Đã teleport tới vị trí trứng một lần.")
-        return true
+    if not eggsFolder or not zone or not zone:IsA("BasePart") then
+        return nil, nil
     end
 
-    warn("[Auto Egg] Teleport tới trứng thất bại: " .. tostring(err))
-    return false
-end
-
-local function FindAutoEggIdByWorldPivot()
-    local things = workspace:FindFirstChild("__THINGS")
-    local eggs = things and things:FindFirstChild("CustomEggs")
-    if not eggs then return nil end
-
-    for _, egg in ipairs(eggs:GetChildren()) do
-        if egg:IsA("Model") then
-            local pivot = egg.WorldPivot
-            if (pivot.Position - AutoEggWorldPivotPosition).Magnitude <= 0.15 then
-                return egg.Name
+    -- Chọn egg có BottomLight gần Break Zone nhất trên mặt phẳng X/Z.
+    local nearestEgg, nearestPart, nearestDistance = nil, nil, math.huge
+    for _, egg in ipairs(eggsFolder:GetChildren()) do
+        local bottomLight = egg:FindFirstChild("BottomLight", true)
+        if bottomLight and bottomLight:IsA("BasePart") then
+            local eggPos = bottomLight.Position
+            local zonePos = zone.Position
+            local dx = eggPos.X - zonePos.X
+            local dz = eggPos.Z - zonePos.Z
+            local distance = dx * dx + dz * dz
+            if distance < nearestDistance then
+                nearestEgg, nearestPart, nearestDistance = egg, bottomLight, distance
             end
         end
     end
 
-    return nil
+    return nearestEgg, nearestPart, zone
+end
+
+local function TeleportToAutoEggOnce(eggPart, zone)
+    if AutoEggTeleported then return true end
+
+    local ok, err = pcall(function()
+        local eggPos = eggPart.Position
+        local zonePos = zone.Position
+        -- Đứng ở trung điểm X/Z giữa egg và Break Zone, nhưng giữ Y bằng Y của egg.
+        local target = Vector3.new(
+            (eggPos.X + zonePos.X) / 2,
+            eggPos.Y,
+            (eggPos.Z + zonePos.Z) / 2
+        )
+
+        local character = Player.Character or Player.CharacterAdded:Wait()
+        local root = character:FindFirstChild("HumanoidRootPart")
+            or character:WaitForChild("HumanoidRootPart")
+        root.CFrame = CFrame.new(target)
+    end)
+
+    if ok then
+        AutoEggTeleported = true
+        print("[Auto Egg] Đã teleport một lần tới trung điểm X/Z, giữ Y theo BottomLight của egg.")
+        return true
+    end
+
+    warn("[Auto Egg] Teleport thất bại: " .. tostring(err))
+    return false
 end
 
 local function StartAutoEgg()
@@ -219,32 +240,32 @@ local function StartAutoEgg()
     task.spawn(function()
         local network = ReplicatedStorage:WaitForChild("Network")
         local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
-
         print("[Auto Egg] Đã tìm thấy remote CustomEggs_Hatch.")
 
-        -- Teleport trước, đúng một lần; sau đó mới xác định ID trứng của server hiện tại.
-        if not TeleportToAutoEggOnce() then
-            AutoEggRunning = false
-            return
-        end
-
+        local egg, eggPart, zone
         local startedAt = os.clock()
         repeat
-            AutoEggEggId = FindAutoEggIdByWorldPivot()
-            if AutoEggEggId then break end
+            egg, eggPart, zone = GetAutoEggTargets()
+            if egg and eggPart and zone then break end
             task.wait(0.25)
         until not (EventSettings.AutoEgg and AutoEggRunning) or os.clock() - startedAt >= 15
 
-        if not AutoEggEggId then
-            warn("[Auto Egg] Không tìm thấy trứng có WorldPivot tại " .. tostring(AutoEggWorldPivotPosition))
+        if not (egg and eggPart and zone) then
+            warn("[Auto Egg] Không tìm thấy egg có BottomLight hoặc Break Zone HatchWar ZONE_GROUND[6].")
             AutoEggRunning = false
             return
         end
 
-        print("[Auto Egg] Đã xác định ID trứng theo WorldPivot: " .. AutoEggEggId)
+        AutoEggEggId = egg.Name
+        print("[Auto Egg] Đã xác định egg ID từ Model: " .. AutoEggEggId)
+
+        -- Chỉ teleport một lần khi bật Auto Egg; không teleport trong vòng hatch.
+        if not TeleportToAutoEggOnce(eggPart, zone) then
+            AutoEggRunning = false
+            return
+        end
 
         while EventSettings.AutoEgg and AutoEggRunning do
-            -- ID được dò từ server hiện tại; không dùng ID cố định giữa các server.
             local ok, err = pcall(function()
                 local amount = RefreshMaxEggHatchAmount()
                 hatchRemote:InvokeServer(AutoEggEggId, amount)
@@ -279,8 +300,7 @@ EventTab:CreateToggle({
 if EventSettings.AutoEgg then
     StartAutoEgg()
 end
--- [END] Auto Egg: teleport một lần, tìm ID trứng theo WorldPivot rồi hatch theo GetMaxHatch()
--- [START] Auto HW Boss Tap
+-- [END] Auto Egg: lấy vị trí egg + Break Zone động, teleport một lần rồi hatch-- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
 local function StartAutoHWTap()
