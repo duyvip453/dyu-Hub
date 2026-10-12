@@ -428,6 +428,18 @@ EventTab:CreateToggle({
 -- [START] Auto Knock House: toggle quét Roll, knock nhà theo thứ tự và tap boss
 local AutoKnockHouseRunning = false
 
+-- Tìm HatchWar hiện tại theo cây Workspace, không phụ thuộc tọa độ cố định.
+local function GetHatchWarHouses()
+    local things = workspace:FindFirstChild("__THINGS")
+    local container = things and things:FindFirstChild("__INSTANCE_CONTAINER")
+    local active = container and container:FindFirstChild("Active")
+    local hatchWar = active and active:FindFirstChild("HatchWar")
+    if not hatchWar then
+        return nil, nil
+    end
+    return hatchWar:FindFirstChild("INTERACT"), hatchWar
+end
+
 local function ReadHouseRollText(hatchWar, houseNumber)
     local interact = hatchWar and hatchWar:FindFirstChild("INTERACT")
     local doors = interact and interact:FindFirstChild("Doors")
@@ -458,14 +470,40 @@ local function ReadHouseRollText(hatchWar, houseNumber)
 end
 
 local function TeleportToHouse(houseNumber)
-    local position = HouseUnlockPositions[houseNumber]
-    if not position then return false end
-    local ok = pcall(function()
+    local _, hatchWar = GetHatchWarHouses()
+    local interact = hatchWar and hatchWar:FindFirstChild("INTERACT")
+    local doors = interact and interact:FindFirstChild("Doors")
+    local door = doors and doors:FindFirstChild(tostring(houseNumber))
+    if not door then
+        warn("[Auto Knock House] Không tìm thấy Door " .. tostring(houseNumber) .. " trong HatchWar.")
+        return false
+    end
+
+    local ok, err = pcall(function()
+        local doorPosition
+        if door:IsA("Model") then
+            doorPosition = door:GetPivot().Position
+        elseif door:IsA("BasePart") then
+            doorPosition = door.Position
+        else
+            local part = door:FindFirstChildWhichIsA("BasePart", true)
+            if part then doorPosition = part.Position end
+        end
+        if not doorPosition then
+            error("Door không có Model pivot hoặc BasePart để xác định vị trí")
+        end
+
         local character = Player.Character or Player.CharacterAdded:Wait()
         local root = character:FindFirstChild("HumanoidRootPart")
             or character:WaitForChild("HumanoidRootPart")
-        root.CFrame = CFrame.new(position)
+        -- Đứng gần cửa thay vì dùng bảng tọa độ cứng.
+        local target = doorPosition + Vector3.new(0, 0, 3)
+        root.CFrame = CFrame.new(target, doorPosition)
     end)
+
+    if not ok then
+        warn("[Auto Knock House] Teleport tới nhà " .. tostring(houseNumber) .. " lỗi: " .. tostring(err))
+    end
     return ok
 end
 
