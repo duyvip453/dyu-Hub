@@ -99,9 +99,23 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
         end)
         if not ok then
             SetQuestDebug("CollectEnchants: remote lỗi: " .. tostring(result))
+        elseif result == false then
+            -- Remote có thể từ chối batch mà không ném lỗi Lua.
+            -- Thử lại đúng ID với số lượng 1 để tránh đứng tiến độ nếu batch không được hỗ trợ.
+            SetQuestDebug("CollectEnchants: batch bị từ chối; thử số lượng 1")
+            if not isEnabled() then return end
+            local retryOk, retryResult = pcall(function()
+                return remote:InvokeServer(entry.Id, 1)
+            end)
+            if not retryOk then
+                SetQuestDebug("CollectEnchants: retry lỗi: " .. tostring(retryResult))
+            elseif retryResult == false then
+                SetQuestDebug("CollectEnchants: server từ chối cả số lượng 1")
+                task.wait(1)
+            end
         end
 
-        -- Đợi UI cập nhật rồi mới đọc lại progress; không lặp vô hạn theo từng món.
+        -- Đợi UI cập nhật rồi đọc lại progress; chỉ gửi batch mới nếu quest vẫn còn thiếu.
         task.wait(0.5)
     end
 end
