@@ -60,11 +60,12 @@ QuestScriptBoxes.CollectPotions = function(questTitle, rank, isEnabled)
 end
 -- [END] Box CollectPotions
 
--- [START] Box CollectEnchants: chỉ nâng một enchant mỗi 0,5 giây
+-- [START] Box CollectEnchants: gửi một lần số lượng enchant còn thiếu, giống CollectPotions
 QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
+    if not isEnabled() then return end
+
     local entries = EnchantUpgradeIDs and EnchantUpgradeIDs.Entries or {}
     local usable = {}
-
     for _, entry in ipairs(entries) do
         if type(entry) == "table" and type(entry.Id) == "string" and entry.Id ~= "" then
             usable[#usable + 1] = entry
@@ -78,14 +79,29 @@ QuestScriptBoxes.CollectEnchants = function(questTitle, rank, isEnabled)
     )
     if not remote or not remote:IsA("RemoteFunction") then return end
 
+    local questPath = QuestRankPaths[rank]
+    if not questPath then return end
+
     while isEnabled() do
+        -- Chỉ tiếp tục nếu vẫn đúng nhiệm vụ; lấy progress hiện tại để tính số còn thiếu.
+        local currentTitle, progressText = GetQuestInfoFromPath(questPath)
+        if currentTitle ~= questTitle or not progressText then return end
+
+        local current, target = ParseQuestProgress(progressText)
+        if not current or not target or target <= 0 or current >= target then return end
+        local amountRemaining = math.max(1, math.floor(target - current))
+
         local entry = usable[math.random(1, #usable)]
-        if not isEnabled() then break end
+        if not isEnabled() then return end
 
-        pcall(function()
-            remote:InvokeServer(entry.Id, 1)
+        local ok, result = pcall(function()
+            return remote:InvokeServer(entry.Id, amountRemaining)
         end)
+        if not ok then
+            SetQuestDebug("CollectEnchants: remote lỗi: " .. tostring(result))
+        end
 
+        -- Đợi UI cập nhật rồi mới đọc lại progress; không lặp vô hạn theo từng món.
         task.wait(0.5)
     end
 end
