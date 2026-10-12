@@ -821,6 +821,7 @@ local function LoadQuestScriptBoxes()
             ParseQuestProgress = ParseQuestProgress,
             IsQuestProgressComplete = IsQuestProgressComplete,
             SetQuestDebug = SetQuestDebug,
+            RunQuestEggHatch = RunQuestEggHatch,
         }, { __index = getfenv() })
         setfenv(compile, env)
         compile()
