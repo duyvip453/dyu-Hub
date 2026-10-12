@@ -204,18 +204,23 @@ local function GetAutoEggTargets()
     return nearestEgg, nearestPart, zone
 end
 
-local function TeleportToAutoEggOnce(eggPart, zone)
+local function TeleportToAutoEggOnce(zone)
     if AutoEggTeleported then return true end
 
     local ok, err = pcall(function()
-        local eggPos = eggPart.Position
-        local zonePos = zone.Position
-        -- Đứng ở trung điểm X/Z giữa egg và Break Zone, nhưng giữ Y bằng Y của egg.
-        local target = Vector3.new(
-            (eggPos.X + zonePos.X) / 2,
-            eggPos.Y,
-            (eggPos.Z + zonePos.Z) / 2
-        )
+        -- Đến tâm mặt trên của Break Zone, cộng độ cao để HumanoidRootPart không nằm trong sàn.
+        local zoneTop = zone.Position.Y + (zone.Size.Y / 2)
+        local target = Vector3.new(zone.Position.X, zoneTop + 3, zone.Position.Z)
+
+        print(string.format(
+            "[Auto Egg] Break Zone Position=(%.3f, %.3f, %.3f), Size=(%.3f, %.3f, %.3f)",
+            zone.Position.X, zone.Position.Y, zone.Position.Z,
+            zone.Size.X, zone.Size.Y, zone.Size.Z
+        ))
+        print(string.format(
+            "[Auto Egg] Teleport target=(%.3f, %.3f, %.3f)",
+            target.X, target.Y, target.Z
+        ))
 
         local character = Player.Character or Player.CharacterAdded:Wait()
         local root = character:FindFirstChild("HumanoidRootPart")
@@ -225,14 +230,13 @@ local function TeleportToAutoEggOnce(eggPart, zone)
 
     if ok then
         AutoEggTeleported = true
-        print("[Auto Egg] Đã teleport một lần tới trung điểm X/Z, giữ Y theo BottomLight của egg.")
+        print("[Auto Egg] Đã teleport một lần tới tâm Break Zone.")
         return true
     end
 
-    warn("[Auto Egg] Teleport thất bại: " .. tostring(err))
+    warn("[Auto Egg] Teleport tới Break Zone thất bại: " .. tostring(err))
     return false
 end
-
 local function StartAutoEgg()
     if AutoEggRunning then return end
     AutoEggRunning = true
@@ -260,7 +264,7 @@ local function StartAutoEgg()
         print("[Auto Egg] Đã xác định egg ID từ Model: " .. AutoEggEggId)
 
         -- Chỉ teleport một lần khi bật Auto Egg; không teleport trong vòng hatch.
-        if not TeleportToAutoEggOnce(eggPart, zone) then
+        if not TeleportToAutoEggOnce(zone) then
             AutoEggRunning = false
             return
         end
