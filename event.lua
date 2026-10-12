@@ -168,23 +168,87 @@ task.spawn(function()
     end
 end)
 
--- [START] Auto Egg: chỉ spam CustomEggs_Hatch theo GetMaxHatch()
+-- [START] Auto Egg: teleport một lần, tìm ID trứng theo WorldPivot rồi hatch theo GetMaxHatch()
 local AutoEggRunning = false
+local AutoEggTeleported = false
+
+local AutoEggTeleportPosition = Vector3.new(7536.7568359375, 16.33778953552246, 21966.52734375)
+local AutoEggWorldPivotPosition = Vector3.new(7537.25, 21.3670044, 21939.1797)
+local AutoEggEggId = nil
+
+local function TeleportToAutoEggOnce()
+    if AutoEggTeleported then return true end
+
+    local ok, err = pcall(function()
+        local character = Player.Character or Player.CharacterAdded:Wait()
+        local root = character:FindFirstChild("HumanoidRootPart")
+            or character:WaitForChild("HumanoidRootPart")
+        root.CFrame = CFrame.new(AutoEggTeleportPosition)
+    end)
+
+    if ok then
+        AutoEggTeleported = true
+        print("[Auto Egg] Đã teleport tới vị trí trứng một lần.")
+        return true
+    end
+
+    warn("[Auto Egg] Teleport tới trứng thất bại: " .. tostring(err))
+    return false
+end
+
+local function FindAutoEggIdByWorldPivot()
+    local things = workspace:FindFirstChild("__THINGS")
+    local eggs = things and things:FindFirstChild("CustomEggs")
+    if not eggs then return nil end
+
+    for _, egg in ipairs(eggs:GetChildren()) do
+        if egg:IsA("Model") then
+            local pivot = egg.WorldPivot
+            if (pivot.Position - AutoEggWorldPivotPosition).Magnitude <= 0.15 then
+                return egg.Name
+            end
+        end
+    end
+
+    return nil
+end
 
 local function StartAutoEgg()
     if AutoEggRunning then return end
     AutoEggRunning = true
 
     task.spawn(function()
-        local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+        local network = ReplicatedStorage:WaitForChild("Network")
         local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
 
-        print("[Auto Egg] Đã bắt đầu; remote CustomEggs_Hatch đã tìm thấy.")
+        print("[Auto Egg] Đã tìm thấy remote CustomEggs_Hatch.")
+
+        -- Teleport trước, đúng một lần; sau đó mới xác định ID trứng của server hiện tại.
+        if not TeleportToAutoEggOnce() then
+            AutoEggRunning = false
+            return
+        end
+
+        local startedAt = os.clock()
+        repeat
+            AutoEggEggId = FindAutoEggIdByWorldPivot()
+            if AutoEggEggId then break end
+            task.wait(0.25)
+        until not (EventSettings.AutoEgg and AutoEggRunning) or os.clock() - startedAt >= 15
+
+        if not AutoEggEggId then
+            warn("[Auto Egg] Không tìm thấy trứng có WorldPivot tại " .. tostring(AutoEggWorldPivotPosition))
+            AutoEggRunning = false
+            return
+        end
+
+        print("[Auto Egg] Đã xác định ID trứng theo WorldPivot: " .. AutoEggEggId)
 
         while EventSettings.AutoEgg and AutoEggRunning do
+            -- ID được dò từ server hiện tại; không dùng ID cố định giữa các server.
             local ok, err = pcall(function()
                 local amount = RefreshMaxEggHatchAmount()
-                hatchRemote:InvokeServer("af4dc46aa70442d8bd56e76df3dd76da", amount)
+                hatchRemote:InvokeServer(AutoEggEggId, amount)
             end)
             if not ok then
                 warn("[Auto Egg] Gọi CustomEggs_Hatch thất bại: " .. tostring(err))
@@ -216,7 +280,7 @@ EventTab:CreateToggle({
 if EventSettings.AutoEgg then
     StartAutoEgg()
 end
--- [END] Auto Egg: chỉ spam CustomEggs_Hatch theo GetMaxHatch()
+-- [END] Auto Egg: teleport một lần, tìm ID trứng theo WorldPivot rồi hatch theo GetMaxHatch()
 -- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
