@@ -139,7 +139,7 @@ task.spawn(function()
 end)
 -- [END] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 
--- [START] Auto Egg: gọi CustomEggs_Hatch với tổng Owned Egg đã quét
+-- [START] Auto Egg: chỉ spam CustomEggs_Hatch theo GetMaxHatch()
 local AutoEggRunning = false
 
 local function StartAutoEgg()
@@ -147,12 +147,6 @@ local function StartAutoEgg()
     AutoEggRunning = true
 
     task.spawn(function()
-        pcall(function()
-            local character = Player.Character or Player.CharacterAdded:Wait()
-            local root = character:WaitForChild("HumanoidRootPart")
-            root.CFrame = CFrame.new(7537.853515625, 16.33778953552246, 21972.216796875)
-        end)
-
         local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
         local hatchRemote = network:WaitForChild("CustomEggs_Hatch")
 
@@ -186,7 +180,7 @@ EventTab:CreateToggle({
 if EventSettings.AutoEgg then
     StartAutoEgg()
 end
--- [END] Auto Egg: gọi CustomEggs_Hatch với tổng Owned Egg đã quét
+-- [END] Auto Egg: chỉ spam CustomEggs_Hatch theo GetMaxHatch()
 -- [START] Auto HW Boss Tap
 local AutoTapRunning = false
 
