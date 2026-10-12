@@ -4,12 +4,21 @@ local Player = game:GetService("Players").LocalPlayer
 
 -- HW_BossScore tồn tại = đang đánh boss; không tồn tại = chưa đánh boss.
 local AutoBossPausedForHouseAction = false
+local AutoUnlockPending = false
+local AutoKnockPending = false
+local AutoHouseActionBusy = false
+local NoHouseWorkSince = nil
+local BossPathWasActive = false
 
 local function IsBossFightActive()
     local workspaceRoot = workspace:FindFirstChild("duycheck022")
     local head = workspaceRoot and workspaceRoot:FindFirstChild("Head")
     local score = head and head:FindFirstChild("HW_BossScore")
     return score ~= nil and score:FindFirstChild("HW_BossScore") ~= nil
+end
+
+local function IsHouseActionBlockingBoss()
+    return AutoBossPausedForHouseAction or AutoUnlockPending or AutoKnockPending or AutoHouseActionBusy
 end
 
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
@@ -200,14 +209,14 @@ local function StartAutoHWTap()
         end)
     end
 
-    if not IsBossFightActive() and not AutoBossPausedForHouseAction then
+    if not IsBossFightActive() and not IsHouseActionBlockingBoss() then
         TeleportToHWBossPosition()
     end
 -- [END] Teleport tọa độ mục tiêu
 -- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            if IsBossFightActive() or AutoBossPausedForHouseAction then
+            if IsBossFightActive() or IsHouseActionBlockingBoss() then
                 task.wait(0.2)
                 continue
             end
@@ -239,7 +248,7 @@ local function StartAutoHWTap()
         local startRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
 
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            if not IsBossFightActive() and not AutoBossPausedForHouseAction then
+            if not IsBossFightActive() and not IsHouseActionBlockingBoss() then
                 pcall(function()
                     startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
                 end)
@@ -256,7 +265,7 @@ local function StartAutoHWTap()
                 break
             end
 
-            if not IsBossFightActive() and not AutoBossPausedForHouseAction then
+            if not IsBossFightActive() and not IsHouseActionBlockingBoss() then
                 TeleportToHWBossPosition()
             end
         end
@@ -452,32 +461,8 @@ local function StartAutoUnlock()
         local lastPrintedAmount = nil
         local lastPrintedStatus = nil
         local printedNotFound = false
-        local dropInfoReady = false
-
         while EventSettings.AutoUnlock and AutoUnlockRunning do
-            -- Đường dẫn HW_BossScore tồn tại nghĩa là đang đánh boss: tuyệt đối không mở nhà.
-            if IsBossFightActive() then
-                dropInfoReady = false
-                AutoBossPausedForHouseAction = false
-                task.wait(0.2)
-                continue
-            end
-
-            -- Chờ 1 giây khi boss vừa kết thúc trước khi bắt đầu thao tác nhà.
-            if not dropInfoReady then
-                dropInfoReady = true
-                AutoBossPausedForHouseAction = true
-                task.wait(1)
-                if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
-                if IsBossFightActive() then
-                    dropInfoReady = false
-                    AutoBossPausedForHouseAction = false
-                    task.wait(0.2)
-                    continue
-                end
-            end
-
-            -- Mỗi vòng đều quét lại cả 8 nhà để tìm căn bị khóa đầu tiên hiện tại.
+            -- Quét trạng thái nhà liên tục, kể cả khi boss đang chạy.
             pcall(ScanHouseUnlockStates)
 
             local itemAmount = ReadUnlockItemAmount()
@@ -493,11 +478,14 @@ local function StartAutoUnlock()
             end
 
             local targetHouse = GetFirstLockedHouse()
-            if targetHouse then
-                local _, hatchWar = GetHatchWarHouses()
-                local housePrice = ReadHousePrice(hatchWar, targetHouse)
+            local _, hatchWar = GetHatchWarHouses()
+            local housePrice = targetHouse and ReadHousePrice(hatchWar, targetHouse) or nil
+            local unlockEligible = targetHouse ~= nil and itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount
+            AutoUnlockPending = unlockEligible and EventSettings.AutoUnlock and AutoUnlockRunning
 
-                if itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount then
+            if unlockEligible and not IsBossFightActive() and not AutoHouseActionBusy and not (EventSettings.AutoKnockHouse and AutoKnockPending) then
+                AutoHouseActionBusy = true
+                AutoBossPausedForHouseAction = true
                     print("[Auto Unlock] Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
                         .. " | item: " .. tostring(itemAmount) .. " | đang mở khóa")
 
@@ -560,7 +548,9 @@ local function StartAutoUnlock()
                             end
                         end
                     end
-                elseif itemAmount ~= nil and housePrice ~= nil then
+                AutoHouseActionBusy = false
+                AutoBossPausedForHouseAction = false
+            elseif targetHouse and itemAmount ~= nil and housePrice ~= nil then
                     -- Không dịch chuyển khi chưa đủ item; tiếp tục cập nhật giá và số lượng.
                     local status = "Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
                         .. " | item: " .. tostring(itemAmount) .. " | chưa đủ điều kiện (cần giá < item)"
@@ -579,6 +569,7 @@ local function StartAutoUnlock()
             task.wait(0.2)
         end
 
+        AutoUnlockPending = false
         AutoBossPausedForHouseAction = false
         AutoUnlockRunning = false
     end)
@@ -660,31 +651,8 @@ local function StartAutoKnockHouse()
         local instances = playerGui and playerGui:FindFirstChild("_INSTANCES")
         local hatchWarBoss = instances and instances:FindFirstChild("HatchWarBoss")
         local originalCFrame = nil
-        local dropInfoReady = false
-
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
-            -- Đường dẫn HW_BossScore tồn tại nghĩa là đang đánh boss: không được teleport/knock.
-            if IsBossFightActive() then
-                dropInfoReady = false
-                AutoBossPausedForHouseAction = false
-                task.wait(0.2)
-                continue
-            end
-
-            -- Chờ 1 giây sau khi boss kết thúc rồi mới thao tác nhà.
-            if not dropInfoReady then
-                dropInfoReady = true
-                AutoBossPausedForHouseAction = true
-                task.wait(1)
-                if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
-                if IsBossFightActive() then
-                    dropInfoReady = false
-                    AutoBossPausedForHouseAction = false
-                    task.wait(0.2)
-                    continue
-                end
-            end
-
+            -- Quét Roll liên tục, kể cả khi boss đang chạy.
             local _, hatchWar = GetHatchWarHouses()
             local rollHouses = {}
 
@@ -696,7 +664,10 @@ local function StartAutoKnockHouse()
                 end
             end
 
-            if #rollHouses > 0 then
+            AutoKnockPending = #rollHouses > 0 and EventSettings.AutoKnockHouse and AutoKnockHouseRunning
+            if #rollHouses > 0 and not IsBossFightActive() and not AutoHouseActionBusy and not (EventSettings.AutoUnlock and AutoUnlockPending) then
+                AutoHouseActionBusy = true
+                AutoBossPausedForHouseAction = true
                 if not originalCFrame then
                     pcall(function()
                         local character = Player.Character or Player.CharacterAdded:Wait()
@@ -741,11 +712,32 @@ local function StartAutoKnockHouse()
                         root.CFrame = originalCFrame
                     end)
                 end
+                AutoHouseActionBusy = false
+                AutoBossPausedForHouseAction = false
+            end
+
+            local bossActiveNow = IsBossFightActive()
+            if bossActiveNow then
+                BossPathWasActive = true
+                NoHouseWorkSince = nil
+                AutoBossPausedForHouseAction = true
+            elseif AutoUnlockPending or AutoKnockPending or AutoHouseActionBusy then
+                NoHouseWorkSince = nil
+                AutoBossPausedForHouseAction = true
+            elseif BossPathWasActive or AutoBossPausedForHouseAction then
+                NoHouseWorkSince = NoHouseWorkSince or os.clock()
+                AutoBossPausedForHouseAction = true
+                if os.clock() - NoHouseWorkSince >= 1 then
+                    AutoBossPausedForHouseAction = false
+                    BossPathWasActive = false
+                    NoHouseWorkSince = nil
+                end
             end
 
             task.wait(0.2)
         end
 
+        AutoKnockPending = false
         AutoBossPausedForHouseAction = false
         AutoKnockHouseRunning = false
     end)
