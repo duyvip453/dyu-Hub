@@ -198,7 +198,9 @@ local function StartAutoHWTap()
         end)
     end
 
-    TeleportToHWBossPosition()
+    if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+        TeleportToHWBossPosition()
+    end
 -- [END] Teleport tọa độ mục tiêu
 -- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
@@ -448,20 +450,29 @@ local function StartAutoUnlock()
         local lastPrintedAmount = nil
         local lastPrintedStatus = nil
         local printedNotFound = false
+        local dropInfoReady = false
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
-            -- Chỉ mở khóa khi DropInfo xuất hiện; nếu đang đánh boss thì chờ.
+            -- DropInfo vắng mặt nghĩa là đang đánh boss; không mở khóa khi đó.
             if not IsDropInfoPresent() then
-                task.wait(0.2)
-                continue
-            end
-            AutoBossPausedForHouseAction = true
-            task.wait(1)
-            if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
-            if not IsDropInfoPresent() then
+                dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
                 continue
+            end
+
+            -- Chờ 1 giây một lần khi DropInfo vừa xuất hiện.
+            if not dropInfoReady then
+                dropInfoReady = true
+                AutoBossPausedForHouseAction = true
+                task.wait(1)
+                if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
+                if not IsDropInfoPresent() then
+                    dropInfoReady = false
+                    AutoBossPausedForHouseAction = false
+                    task.wait(0.2)
+                    continue
+                end
             end
 
             -- Mỗi vòng đều quét lại cả 8 nhà để tìm căn bị khóa đầu tiên hiện tại.
@@ -553,7 +564,6 @@ local function StartAutoUnlock()
                 end
             end
 
-            AutoBossPausedForHouseAction = false
             task.wait(0.2)
         end
 
@@ -637,23 +647,30 @@ local function StartAutoKnockHouse()
         local playerGui = Player:FindFirstChild("PlayerGui")
         local instances = playerGui and playerGui:FindFirstChild("_INSTANCES")
         local hatchWarBoss = instances and instances:FindFirstChild("HatchWarBoss")
-        local liveCircle = hatchWarBoss and hatchWarBoss:FindFirstChild("LiveCircle")
         local originalCFrame = nil
-        local wasAwayFromHome = false
+        local dropInfoReady = false
 
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
-            -- Chỉ knock khi DropInfo xuất hiện; nếu đang đánh boss thì chờ.
+            -- DropInfo vắng mặt nghĩa là đang đánh boss; không knock khi đó.
             if not IsDropInfoPresent() then
-                task.wait(0.2)
-                continue
-            end
-            AutoBossPausedForHouseAction = true
-            task.wait(1)
-            if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
-            if not IsDropInfoPresent() then
+                dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
                 continue
+            end
+
+            -- Chờ 1 giây một lần khi DropInfo vừa xuất hiện.
+            if not dropInfoReady then
+                dropInfoReady = true
+                AutoBossPausedForHouseAction = true
+                task.wait(1)
+                if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
+                if not IsDropInfoPresent() then
+                    dropInfoReady = false
+                    AutoBossPausedForHouseAction = false
+                    task.wait(0.2)
+                    continue
+                end
             end
 
             local _, hatchWar = GetHatchWarHouses()
@@ -710,7 +727,6 @@ local function StartAutoKnockHouse()
                 end
             end
 
-            AutoBossPausedForHouseAction = false
             task.wait(0.2)
         end
 
