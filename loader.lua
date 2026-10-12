@@ -609,7 +609,7 @@ local RankScanOrder = {"Easy", "Medium", "Hard", "Extreme"}
 Tab1:CreateSection("Bảng ưu tiên nhiệm vụ")
 local PriorityLabels = {}
 for index = 1, 4 do
-    PriorityLabels[index] = Tab1:CreateLabel({Text = "", Style = 1})
+    PriorityLabels[index] = Tab1:CreateLabel({Text = "", Style = 2})
 end
 local QuestDebugLabel = Tab1:CreateLabel({Text = "Auto Rank: idle", Style = 1})
 local function SetQuestDebug(text)
