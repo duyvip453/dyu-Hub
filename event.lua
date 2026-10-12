@@ -153,7 +153,7 @@ local function StartAutoEgg()
         while EventSettings.AutoEgg and AutoEggRunning do
             pcall(function()
                 local amount = RefreshMaxEggHatchAmount()
-                hatchRemote:InvokeServer("c63e54df863d449e934db74b66433996", amount)
+                hatchRemote:InvokeServer("af4dc46aa70442d8bd56e76df3dd76da", amount)
             end)
             task.wait(0.5)
         end
