@@ -106,22 +106,6 @@ task.spawn(function()
 end)
 -- [END] BuyMax: dùng EggCmds.GetMaxHatch và cập nhật cache mỗi 30 giây
 
--- [START] Reset EggSlotsMachine BuyMax một lần khi khởi động
-task.spawn(function()
-    task.wait(1)
-
-    local RS = game:GetService("ReplicatedStorage")
-    local playerGui = Player:WaitForChild("PlayerGui")
-    local machines = playerGui:WaitForChild("_MACHINES")
-    local gui = machines:WaitForChild("EggSlotsMachine")
-    local TabController = require(RS:WaitForChild("Library"):WaitForChild("Client"):WaitForChild("TabController"))
-
-    TabController.OpenTab("EggSlotsMachine")
-    task.wait()
-    gui.Enabled = false
-end)
--- [END] Reset EggSlotsMachine BuyMax một lần khi khởi động
-
 -- [START] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 task.spawn(function()
     while true do
@@ -710,6 +694,4 @@ if EventSettings.AutoKnockHouse then
     StartAutoKnockHouse()
 end
 -- [END] Auto Knock House: toggle quét Roll, knock nhà theo thứ tự và tap boss
-
-
 
