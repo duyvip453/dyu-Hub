@@ -2,12 +2,14 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = game:GetService("Players").LocalPlayer
 
--- DropInfo tồn tại = chưa đánh boss; mất DropInfo = đang đánh boss.
+-- HW_BossScore tồn tại = đang đánh boss; không tồn tại = chưa đánh boss.
 local AutoBossPausedForHouseAction = false
 
-local function IsDropInfoPresent()
-    local playerGui = Player:FindFirstChild("PlayerGui")
-    return playerGui ~= nil and playerGui:FindFirstChild("DropInfo") ~= nil
+local function IsBossFightActive()
+    local workspaceRoot = workspace:FindFirstChild("duycheck022")
+    local head = workspaceRoot and workspaceRoot:FindFirstChild("Head")
+    local score = head and head:FindFirstChild("HW_BossScore")
+    return score ~= nil and score:FindFirstChild("HW_BossScore") ~= nil
 end
 
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
@@ -198,14 +200,14 @@ local function StartAutoHWTap()
         end)
     end
 
-    if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+    if not IsBossFightActive() and not AutoBossPausedForHouseAction then
         TeleportToHWBossPosition()
     end
 -- [END] Teleport tọa độ mục tiêu
 -- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            if IsDropInfoPresent() or AutoBossPausedForHouseAction then
+            if IsBossFightActive() or AutoBossPausedForHouseAction then
                 task.wait(0.2)
                 continue
             end
@@ -237,7 +239,7 @@ local function StartAutoHWTap()
         local startRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
 
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+            if not IsBossFightActive() and not AutoBossPausedForHouseAction then
                 pcall(function()
                     startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
                 end)
@@ -254,7 +256,7 @@ local function StartAutoHWTap()
                 break
             end
 
-            if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+            if not IsBossFightActive() and not AutoBossPausedForHouseAction then
                 TeleportToHWBossPosition()
             end
         end
@@ -454,7 +456,7 @@ local function StartAutoUnlock()
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
             -- DropInfo vắng mặt nghĩa là đang đánh boss; không mở khóa khi đó.
-            if not IsDropInfoPresent() then
+            if not IsBossFightActive() then
                 dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
@@ -467,7 +469,7 @@ local function StartAutoUnlock()
                 AutoBossPausedForHouseAction = true
                 task.wait(1)
                 if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
-                if not IsDropInfoPresent() then
+                if not IsBossFightActive() then
                     dropInfoReady = false
                     AutoBossPausedForHouseAction = false
                     task.wait(0.2)
@@ -652,7 +654,7 @@ local function StartAutoKnockHouse()
 
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
             -- DropInfo vắng mặt nghĩa là đang đánh boss; không knock khi đó.
-            if not IsDropInfoPresent() then
+            if not IsBossFightActive() then
                 dropInfoReady = false
                 AutoBossPausedForHouseAction = false
                 task.wait(0.2)
@@ -665,7 +667,7 @@ local function StartAutoKnockHouse()
                 AutoBossPausedForHouseAction = true
                 task.wait(1)
                 if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
-                if not IsDropInfoPresent() then
+                if not IsBossFightActive() then
                     dropInfoReady = false
                     AutoBossPausedForHouseAction = false
                     task.wait(0.2)
