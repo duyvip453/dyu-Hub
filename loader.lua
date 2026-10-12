@@ -716,24 +716,39 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- S1 không được dispatch khi S4 chưa xuất hiện trong bảng priority.
+                -- Giữ điều kiện cũ: chỉ dispatch khi có nhiệm vụ đầu bảng
+                -- và rank Extreme (S4) thực sự xuất hiện, không nhầm found[4]
+                -- (nhiệm vụ đứng thứ tư sau sắp xếp) với rank S4.
                 local first = found[1]
-                local fourth = found[4]
-                if not first or not fourth then
-                    SetQuestDebug("đang chờ đủ S1 và S4")
+                local hasExtreme = false
+                for _, item in ipairs(found) do
+                    if item.Rank == "Extreme" then
+                        hasExtreme = true
+                        break
+                    end
+                end
+
+                if not first or not hasExtreme then
+                    SetQuestDebug("đang chờ nhiệm vụ đầu bảng và rank Extreme")
                     task.wait(0.2)
                 else
-                    -- S4 đã có: quét lại toàn bộ bảng một lần, xác nhận S1 và S4
-                    -- vẫn tồn tại và S1 chưa bị đổi trước khi gọi box.
+                    -- Quét lại và xác nhận nhiệm vụ đầu bảng không đổi,
+                    -- đồng thời xác nhận rank Extreme vẫn có nhiệm vụ.
                     local verified = ScanAndSortQuestRanks()
                     local verifiedFirst = verified[1]
-                    local verifiedFourth = verified[4]
+                    local verifiedHasExtreme = false
+                    for _, item in ipairs(verified) do
+                        if item.Rank == "Extreme" then
+                            verifiedHasExtreme = true
+                            break
+                        end
+                    end
                     local sameFirst = verifiedFirst
                         and verifiedFirst.Rank == first.Rank
                         and verifiedFirst.Title == first.Title
                         and verifiedFirst.Group == first.Group
 
-                    if sameFirst and verifiedFourth then
+                    if sameFirst and verifiedHasExtreme then
                         local path = QuestRankPaths[verifiedFirst.Rank]
                         local currentTitle, currentProgress
                         if path then
