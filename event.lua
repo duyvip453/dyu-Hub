@@ -1,6 +1,15 @@
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Player = game:GetService("Players").LocalPlayer
+
+-- DropInfo tồn tại = chưa đánh boss; mất DropInfo = đang đánh boss.
+local AutoBossPausedForHouseAction = false
+
+local function IsDropInfoPresent()
+    local playerGui = Player:FindFirstChild("PlayerGui")
+    return playerGui ~= nil and playerGui:FindFirstChild("DropInfo") ~= nil
+end
+
 local ConfigFileName = "DYUHUB_Event_" .. game.PlaceId .. "_" .. Player.UserId .. ".json"
 
 local EventSettings = {
@@ -194,6 +203,10 @@ local function StartAutoHWTap()
 -- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
+            if IsDropInfoPresent() or AutoBossPausedForHouseAction then
+                task.wait(0.2)
+                continue
+            end
             local ok, err = pcall(function()
                 local player = game:GetService("Players").LocalPlayer
                 local playerGui = player:WaitForChild("PlayerGui")
@@ -222,9 +235,11 @@ local function StartAutoHWTap()
         local startRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
 
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            local ok, err = pcall(function()
-                startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
-            end)
+            if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+                pcall(function()
+                    startRemote:InvokeServer("HatchWar", "HW_Boss_Start", 6)
+                end)
+            end
             task.wait(0.5)
         end
     end)
@@ -237,7 +252,9 @@ local function StartAutoHWTap()
                 break
             end
 
-            TeleportToHWBossPosition()
+            if not IsDropInfoPresent() and not AutoBossPausedForHouseAction then
+                TeleportToHWBossPosition()
+            end
         end
     end)
 -- [END] Teleport mỗi 5 giây
@@ -433,6 +450,20 @@ local function StartAutoUnlock()
         local printedNotFound = false
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
+            -- Chỉ mở khóa khi DropInfo xuất hiện; nếu đang đánh boss thì chờ.
+            if not IsDropInfoPresent() then
+                task.wait(0.2)
+                continue
+            end
+            AutoBossPausedForHouseAction = true
+            task.wait(1)
+            if not (EventSettings.AutoUnlock and AutoUnlockRunning) then break end
+            if not IsDropInfoPresent() then
+                AutoBossPausedForHouseAction = false
+                task.wait(0.2)
+                continue
+            end
+
             -- Mỗi vòng đều quét lại cả 8 nhà để tìm căn bị khóa đầu tiên hiện tại.
             pcall(ScanHouseUnlockStates)
 
@@ -522,9 +553,11 @@ local function StartAutoUnlock()
                 end
             end
 
+            AutoBossPausedForHouseAction = false
             task.wait(0.2)
         end
 
+        AutoBossPausedForHouseAction = false
         AutoUnlockRunning = false
     end)
 end
@@ -608,21 +641,21 @@ local function StartAutoKnockHouse()
         local originalCFrame = nil
         local wasAwayFromHome = false
 
-        -- Chỉ chạy HW_Boss_Tap song song; không gọi HW_Boss_Start và không teleport đến boss.
-        task.spawn(function()
-            while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
-                pcall(function()
-                    if liveCircle and liveCircle:IsA("ImageButton") and liveCircle.Visible
-                        and type(firesignal) == "function" then
-                        firesignal(liveCircle.Activated)
-                    end
-                    tapRemote:FireServer("HatchWar", "HW_Boss_Tap", "circle")
-                end)
-                task.wait(0.2)
-            end
-        end)
-
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
+            -- Chỉ knock khi DropInfo xuất hiện; nếu đang đánh boss thì chờ.
+            if not IsDropInfoPresent() then
+                task.wait(0.2)
+                continue
+            end
+            AutoBossPausedForHouseAction = true
+            task.wait(1)
+            if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
+            if not IsDropInfoPresent() then
+                AutoBossPausedForHouseAction = false
+                task.wait(0.2)
+                continue
+            end
+
             local _, hatchWar = GetHatchWarHouses()
             local rollHouses = {}
 
@@ -677,9 +710,11 @@ local function StartAutoKnockHouse()
                 end
             end
 
+            AutoBossPausedForHouseAction = false
             task.wait(0.2)
         end
 
+        AutoBossPausedForHouseAction = false
         AutoKnockHouseRunning = false
     end)
 end
