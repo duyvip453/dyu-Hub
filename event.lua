@@ -144,6 +144,30 @@ task.spawn(function()
 end)
 -- [END] Auto Knock House: tự nhảy mỗi 5 phút từ lúc event.lua khởi chạy
 
+-- Điều phối trạng thái boss và thao tác nhà.
+task.spawn(function()
+    while true do
+        local active = IsBossFightActive()
+        if active then
+            BossPathWasActive = true
+            NoHouseWorkSince = nil
+            AutoBossPausedForHouseAction = true
+        elseif AutoUnlockPending or AutoKnockPending or AutoHouseActionBusy then
+            AutoBossPausedForHouseAction = true
+            NoHouseWorkSince = nil
+        elseif BossPathWasActive or AutoBossPausedForHouseAction then
+            AutoBossPausedForHouseAction = true
+            NoHouseWorkSince = NoHouseWorkSince or os.clock()
+            if os.clock() - NoHouseWorkSince >= 1 then
+                AutoBossPausedForHouseAction = false
+                BossPathWasActive = false
+                NoHouseWorkSince = nil
+            end
+        end
+        task.wait(0.05)
+    end
+end)
+
 -- [START] Auto Egg: chỉ spam CustomEggs_Hatch theo GetMaxHatch()
 local AutoEggRunning = false
 
@@ -456,15 +480,13 @@ local function StartAutoUnlock()
     AutoUnlockRunning = true
 
     task.spawn(function()
-        local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+        local network = ReplicatedStorage:WaitForChild("Network")
         local unlockRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
-        local lastPrintedAmount = nil
-        local lastPrintedStatus = nil
-        local printedNotFound = false
-        while EventSettings.AutoUnlock and AutoUnlockRunning do
-            -- Quét trạng thái nhà liên tục, kể cả khi boss đang chạy.
-            pcall(ScanHouseUnlockStates)
+        local lastPrintedAmount, lastPrintedStatus, printedNotFound = nil, nil, false
 
+        while EventSettings.AutoUnlock and AutoUnlockRunning do
+            -- Quét luôn cả khi boss hoạt động; chỉ hành động nhà khi được cấp khóa.
+            pcall(ScanHouseUnlockStates)
             local itemAmount = ReadUnlockItemAmount()
             if itemAmount ~= nil then
                 if lastPrintedAmount ~= itemAmount then
@@ -480,97 +502,64 @@ local function StartAutoUnlock()
             local targetHouse = GetFirstLockedHouse()
             local _, hatchWar = GetHatchWarHouses()
             local housePrice = targetHouse and ReadHousePrice(hatchWar, targetHouse) or nil
-            local unlockEligible = targetHouse ~= nil and itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount
-            AutoUnlockPending = unlockEligible and EventSettings.AutoUnlock and AutoUnlockRunning
+            local eligible = targetHouse ~= nil and itemAmount ~= nil and housePrice ~= nil and housePrice < itemAmount
+            AutoUnlockPending = eligible and EventSettings.AutoUnlock and AutoUnlockRunning
 
-            if unlockEligible and not IsBossFightActive() and not AutoHouseActionBusy and not (EventSettings.AutoKnockHouse and AutoKnockPending) then
+            if eligible and not IsBossFightActive() and not AutoHouseActionBusy
+                and not (EventSettings.AutoKnockHouse and AutoKnockPending) then
                 AutoHouseActionBusy = true
                 AutoBossPausedForHouseAction = true
-                    print("[Auto Unlock] Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
-                        .. " | item: " .. tostring(itemAmount) .. " | đang mở khóa")
+                local character = Player.Character or Player.CharacterAdded:Wait()
+                local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart")
+                local originalCFrame = root.CFrame
+                local housePosition = HouseUnlockPositions[targetHouse]
 
-                    local character = Player.Character or Player.CharacterAdded:Wait()
-                    local root = character:FindFirstChild("HumanoidRootPart")
-                        or character:WaitForChild("HumanoidRootPart")
-                    local originalCFrame = root.CFrame
-                    local housePosition = HouseUnlockPositions[targetHouse]
-
-                    if housePosition and not IsBossFightActive() then
-                        local teleported = pcall(function()
-                            if IsBossFightActive() then return end
-                            root.CFrame = CFrame.new(housePosition)
-                        end)
-
-                        if teleported and not IsBossFightActive() then
-                            task.wait(0.25)
-                            if IsBossFightActive() then
-                                task.wait(0.2)
-                                continue
-                            end
-                            local unlockOk, unlockResult = pcall(function()
+                if housePosition and not IsBossFightActive() then
+                    local teleported = pcall(function()
+                        if IsBossFightActive() then return end
+                        root.CFrame = CFrame.new(housePosition)
+                    end)
+                    if teleported and not IsBossFightActive() then
+                        task.wait(0.25)
+                        if not IsBossFightActive() then
+                            local ok, result = pcall(function()
                                 if IsBossFightActive() then return end
                                 return unlockRemote:InvokeServer("HatchWar", "HW_Doors_Unlock", targetHouse)
                             end)
-                            if not unlockOk then
-                                warn("[Auto Unlock] Lệnh mở nhà " .. targetHouse .. " gặp lỗi: " .. tostring(unlockResult))
-                            end
+                            if not ok then warn("[Auto Unlock] Lệnh mở nhà " .. targetHouse .. " lỗi: " .. tostring(result)) end
                             task.wait(0.25)
-
-                            -- Không teleport về vị trí cũ nếu boss vừa bắt đầu.
                             if not IsBossFightActive() then
                                 pcall(function()
-                                    local currentCharacter = Player.Character or Player.CharacterAdded:Wait()
-                                    local currentRoot = currentCharacter:FindFirstChild("HumanoidRootPart")
-                                        or currentCharacter:WaitForChild("HumanoidRootPart")
-                                    if not IsBossFightActive() then
-                                        currentRoot.CFrame = originalCFrame
-                                    end
+                                    local ch = Player.Character or Player.CharacterAdded:Wait()
+                                    local rt = ch:FindFirstChild("HumanoidRootPart") or ch:WaitForChild("HumanoidRootPart")
+                                    if not IsBossFightActive() then rt.CFrame = originalCFrame end
                                 end)
                             end
-
-                            -- Chờ trạng thái căn vừa xử lý cập nhật rồi mới quét chọn căn tiếp theo.
-                            -- Tránh gọi Unlock lặp liên tục vào cùng một căn khi server cập nhật chậm.
-                            local waitStarted = os.clock()
-                            local houseOpened = false
+                            local started = os.clock()
+                            local opened = false
                             repeat
                                 task.wait(0.25)
                                 pcall(ScanHouseUnlockStates)
-                                houseOpened = HouseUnlockStates[targetHouse] == true
-                            until houseOpened
-                                or not (EventSettings.AutoUnlock and AutoUnlockRunning)
-                                or os.clock() - waitStarted >= 5
-
-                            if houseOpened then
-                                print("[Auto Unlock] Nhà " .. targetHouse .. " đã được xác nhận mở; chuyển sang quét nhà tiếp theo.")
+                                opened = HouseUnlockStates[targetHouse] == true
+                            until opened or not AutoUnlockRunning or os.clock() - started >= 5
+                            if opened then
+                                print("[Auto Unlock] Nhà " .. targetHouse .. " đã mở; tiếp tục quét.")
                             else
-                                warn("[Auto Unlock] Chưa xác nhận được nhà " .. targetHouse .. " đã mở. Sẽ quét lại, không spam lệnh liên tục.")
-                                task.wait(1)
+                                warn("[Auto Unlock] Chưa xác nhận nhà " .. targetHouse .. " đã mở.")
                             end
                         end
                     end
+                end
                 AutoHouseActionBusy = false
                 AutoBossPausedForHouseAction = false
-            elseif targetHouse and itemAmount ~= nil and housePrice ~= nil then
-                    -- Không dịch chuyển khi chưa đủ item; tiếp tục cập nhật giá và số lượng.
-                    local status = "Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice)
-                        .. " | item: " .. tostring(itemAmount) .. " | chưa đủ điều kiện (cần giá < item)"
-                    if status ~= lastPrintedStatus then
-                        print("[Auto Unlock] " .. status)
-                        lastPrintedStatus = status
-                    end
-                end
-            else
-                if lastPrintedStatus ~= "all-unlocked" then
-                    print("[Auto Unlock] Không còn nhà nào được đánh dấu là đang khóa.")
-                    lastPrintedStatus = "all-unlocked"
-                end
+            elseif targetHouse and itemAmount ~= nil and housePrice ~= nil and housePrice >= itemAmount then
+                local status = "Nhà " .. targetHouse .. " | giá: " .. tostring(housePrice) .. " | item: " .. tostring(itemAmount) .. " | chưa đủ điều kiện"
+                if status ~= lastPrintedStatus then print("[Auto Unlock] " .. status); lastPrintedStatus = status end
             end
 
             task.wait(0.2)
         end
-
         AutoUnlockPending = false
-        AutoBossPausedForHouseAction = false
         AutoUnlockRunning = false
     end)
 end
@@ -581,18 +570,11 @@ EventTab:CreateToggle({
     Callback = function(Value)
         EventSettings.AutoUnlock = Value
         SaveConfig()
-
-        if Value then
-            StartAutoUnlock()
-        else
-            AutoUnlockRunning = false
-        end
+        if Value then StartAutoUnlock() else AutoUnlockRunning = false end
     end
 })
 
-if EventSettings.AutoUnlock then
-    StartAutoUnlock()
-end
+if EventSettings.AutoUnlock then StartAutoUnlock() end
 -- [END] Auto Unlock: quét trạng thái, chờ đủ item, mở nhà đầu tiên còn khóa
 
 -- [START] Auto Knock House: toggle quét Roll, knock nhà theo thứ tự và tap boss
@@ -644,49 +626,41 @@ local function StartAutoKnockHouse()
     AutoKnockHouseRunning = true
 
     task.spawn(function()
-        local network = game:GetService("ReplicatedStorage"):WaitForChild("Network")
+        local network = ReplicatedStorage:WaitForChild("Network")
         local invokeRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
-        local tapRemote = network:WaitForChild("Instancing_FireCustomFromClient")
-        local playerGui = Player:FindFirstChild("PlayerGui")
-        local instances = playerGui and playerGui:FindFirstChild("_INSTANCES")
-        local hatchWarBoss = instances and instances:FindFirstChild("HatchWarBoss")
         local originalCFrame = nil
+
         while EventSettings.AutoKnockHouse and AutoKnockHouseRunning do
-            -- Quét Roll liên tục, kể cả khi boss đang chạy.
             local _, hatchWar = GetHatchWarHouses()
             local rollHouses = {}
-
-            -- Quét Amount của từng nhà; chỉ lấy text có chứa "roll", theo thứ tự nhà nhỏ trước.
             for houseNumber = 1, 8 do
                 local amountText = ReadHouseRollText(hatchWar, houseNumber)
                 if amountText and string.find(string.lower(amountText), "roll", 1, true) then
                     table.insert(rollHouses, houseNumber)
                 end
             end
-
             AutoKnockPending = #rollHouses > 0 and EventSettings.AutoKnockHouse and AutoKnockHouseRunning
-            if #rollHouses > 0 and not IsBossFightActive() and not AutoHouseActionBusy and not (EventSettings.AutoUnlock and AutoUnlockPending) then
+
+            if #rollHouses > 0 and not IsBossFightActive() and not AutoHouseActionBusy
+                and not (EventSettings.AutoUnlock and AutoUnlockPending) then
                 AutoHouseActionBusy = true
                 AutoBossPausedForHouseAction = true
                 if not originalCFrame then
                     pcall(function()
-                        local character = Player.Character or Player.CharacterAdded:Wait()
-                        local root = character:FindFirstChild("HumanoidRootPart")
-                            or character:WaitForChild("HumanoidRootPart")
-                        originalCFrame = root.CFrame
+                        local ch = Player.Character or Player.CharacterAdded:Wait()
+                        local rt = ch:FindFirstChild("HumanoidRootPart") or ch:WaitForChild("HumanoidRootPart")
+                        originalCFrame = rt.CFrame
                     end)
                 end
 
                 for _, houseNumber in ipairs(rollHouses) do
-                    if not (EventSettings.AutoKnockHouse and AutoKnockHouseRunning) then break end
-                    if IsBossFightActive() then break end
-
-                    -- Kiểm tra lại ngay trước teleport và trước remote.
+                    if not AutoKnockHouseRunning or IsBossFightActive() then break end
                     local _, currentHatchWar = GetHatchWarHouses()
                     local currentText = ReadHouseRollText(currentHatchWar, houseNumber)
                     if currentText and string.find(string.lower(currentText), "roll", 1, true)
                         and not IsBossFightActive() then
-                        if TeleportToHouse(houseNumber) then
+                        local teleported = TeleportToHouse(houseNumber)
+                        if teleported then
                             task.wait(0.15)
                             if IsBossFightActive() then break end
                             local ok, result = pcall(function()
@@ -703,42 +677,20 @@ local function StartAutoKnockHouse()
                     end
                 end
 
-                -- Nếu boss bắt đầu giữa chu kỳ, không teleport thêm kể cả về vị trí cũ.
                 if originalCFrame and not IsBossFightActive() then
                     pcall(function()
-                        local character = Player.Character or Player.CharacterAdded:Wait()
-                        local root = character:FindFirstChild("HumanoidRootPart")
-                            or character:WaitForChild("HumanoidRootPart")
-                        root.CFrame = originalCFrame
+                        local ch = Player.Character or Player.CharacterAdded:Wait()
+                        local rt = ch:FindFirstChild("HumanoidRootPart") or ch:WaitForChild("HumanoidRootPart")
+                        if not IsBossFightActive() then rt.CFrame = originalCFrame end
                     end)
                 end
                 AutoHouseActionBusy = false
                 AutoBossPausedForHouseAction = false
             end
 
-            local bossActiveNow = IsBossFightActive()
-            if bossActiveNow then
-                BossPathWasActive = true
-                NoHouseWorkSince = nil
-                AutoBossPausedForHouseAction = true
-            elseif AutoUnlockPending or AutoKnockPending or AutoHouseActionBusy then
-                NoHouseWorkSince = nil
-                AutoBossPausedForHouseAction = true
-            elseif BossPathWasActive or AutoBossPausedForHouseAction then
-                NoHouseWorkSince = NoHouseWorkSince or os.clock()
-                AutoBossPausedForHouseAction = true
-                if os.clock() - NoHouseWorkSince >= 1 then
-                    AutoBossPausedForHouseAction = false
-                    BossPathWasActive = false
-                    NoHouseWorkSince = nil
-                end
-            end
-
             task.wait(0.2)
         end
-
         AutoKnockPending = false
-        AutoBossPausedForHouseAction = false
         AutoKnockHouseRunning = false
     end)
 end
@@ -749,16 +701,10 @@ EventTab:CreateToggle({
     Callback = function(Value)
         EventSettings.AutoKnockHouse = Value
         SaveConfig()
-        if Value then
-            StartAutoKnockHouse()
-        else
-            AutoKnockHouseRunning = false
-        end
+        if Value then StartAutoKnockHouse() else AutoKnockHouseRunning = false end
     end
 })
 
-if EventSettings.AutoKnockHouse then
-    StartAutoKnockHouse()
-end
+if EventSettings.AutoKnockHouse then StartAutoKnockHouse() end
 -- [END] Auto Knock House: toggle quét Roll, knock nhà theo thứ tự và tap boss
 
