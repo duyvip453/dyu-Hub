@@ -63,7 +63,6 @@ local function LoadConfig()
 end
 
 LoadConfig()
-LoadConfig()
 local isLoaded = false
 local bgUrl = "https://raw.githubusercontent.com/duyvip453/dyu-Hub/refs/heads/main/backgroud.lua?v=" .. math.random(1, 100000)
 local success, rawCode = pcall(function() return game:HttpGet(bgUrl) end)
@@ -304,7 +303,9 @@ local function StartAutoHWTap()
 -- [START] LiveCircle + HW_Boss_Tap
     task.spawn(function()
         while EventSettings.AutoHatchWarBossTap and AutoTapRunning do
-            if IsBossFightActive() or IsHouseActionBlockingBoss() then
+            -- Tap phải chạy khi boss đang hiện diện; chỉ tạm dừng lúc boss chưa active
+            -- nhưng coordinator đang nhường lượt cho thao tác nhà.
+            if not IsBossFightActive() and IsHouseActionBlockingBoss() then
                 task.wait(0.2)
                 continue
             end
@@ -547,11 +548,21 @@ local function StartAutoUnlock()
         local network = ReplicatedStorage:WaitForChild("Network")
         local unlockRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
         local lastPrintedAmount, lastPrintedStatus, printedNotFound = nil, nil, false
+        local itemAmount = nil
+        local nextInventoryScanAt = 0
+        local nextHouseScanAt = 0
 
         while EventSettings.AutoUnlock and AutoUnlockRunning do
-            -- Quét luôn cả khi boss hoạt động; chỉ hành động nhà khi được cấp khóa.
-            pcall(ScanHouseUnlockStates)
-            local itemAmount = ReadUnlockItemAmount()
+            -- Quét nhà và inventory theo nhịp riêng; không duyệt toàn bộ PlayerGui mỗi 0.2 giây.
+            local now = os.clock()
+            if now >= nextHouseScanAt then
+                pcall(ScanHouseUnlockStates)
+                nextHouseScanAt = now + 0.5
+            end
+            if now >= nextInventoryScanAt then
+                itemAmount = ReadUnlockItemAmount()
+                nextInventoryScanAt = now + 2
+            end
             if itemAmount ~= nil then
                 if lastPrintedAmount ~= itemAmount then
                     print("[Auto Unlock] Item UID " .. UnlockItemUID .. " | số lượng: " .. tostring(itemAmount))
