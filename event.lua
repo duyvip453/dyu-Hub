@@ -497,9 +497,21 @@ local function ProcessOpenHouses(openHouses)
                 root.CFrame = CFrame.new(targetPosition)
                 task.wait(0.25)
 
-                knockRemote:InvokeServer("HatchWar", "HW_Doors_Knock", houseNumber)
-                print("[Auto Knock] Đã gửi Knock cho nhà " .. tostring(houseNumber))
-                task.wait(0.25)
+                -- Ghi rõ kết quả remote để phân biệt lỗi gọi hàm với server từ chối hành động.
+                print(string.format(
+                    "[Auto Knock] Gọi Knock: house=%d, position=(%.2f, %.2f, %.2f)",
+                    houseNumber, targetPosition.X, targetPosition.Y, targetPosition.Z
+                ))
+                local callOk, result = pcall(function()
+                    return knockRemote:InvokeServer("HatchWar", "HW_Doors_Knock", houseNumber)
+                end)
+
+                if callOk then
+                    print("[Auto Knock] Remote trả về cho nhà " .. tostring(houseNumber) .. ": " .. tostring(result))
+                else
+                    warn("[Auto Knock] Remote lỗi ở nhà " .. tostring(houseNumber) .. ": " .. tostring(result))
+                end
+                task.wait(0.75)
             end
         end
     end)
