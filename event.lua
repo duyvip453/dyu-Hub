@@ -425,8 +425,6 @@ local function ProcessOpenHouses(openHouses)
         return
     end
 
-    local root = GetCharacterRoot()
-    local originalCFrame = root.CFrame
     local wasBossEnabled = EventSettings.AutoHatchWarBossTap
     local ready = PauseAutoBossStart()
 
@@ -434,6 +432,11 @@ local function ProcessOpenHouses(openHouses)
         RestoreAutoBoss(wasBossEnabled)
         return
     end
+
+    -- Lưu vị trí ngay trước khi bắt đầu teleport qua các nhà.
+    local root = GetCharacterRoot()
+    local originalCFrame = root.CFrame
+    print("[Auto Knock] Đã lưu vị trí ban đầu; sẽ quay về sau khi xử lý danh sách nhà.")
 
     local network = ReplicatedStorage:WaitForChild("Network")
     local knockRemote = network:WaitForChild("Instancing_InvokeCustomFromClient")
@@ -469,11 +472,16 @@ local function ProcessOpenHouses(openHouses)
         end
     end)
 
-    -- Luôn cố gắng đưa nhân vật về vị trí ban đầu sau khi xử lý.
-    pcall(function()
+    -- Sau khi xử lý xong danh sách nhà, đưa nhân vật về vị trí đã lưu.
+    local returnOk, returnErr = pcall(function()
         local currentRoot = GetCharacterRoot()
         currentRoot.CFrame = originalCFrame
     end)
+    if returnOk then
+        print("[Auto Knock] Đã quay về vị trí ban đầu.")
+    else
+        warn("[Auto Knock] Không thể quay về vị trí ban đầu: " .. tostring(returnErr))
+    end
 
     RestoreAutoBoss(wasBossEnabled)
 
