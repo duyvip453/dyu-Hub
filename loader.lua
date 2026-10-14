@@ -839,7 +839,32 @@ LoadQuestScriptBoxes()
 -- [END] Tải các Script Box từ script.lua trên GitHub
 
 -- [START] Tele: khu vực riêng cho Auto Teleport to Best Area
--- Tạm thời chỉ tạo UI và lưu cấu hình; logic teleport sẽ được bổ sung sau.
+-- Bộ đếm generation giúp vòng lặp cũ dừng ngay khi toggle tắt hoặc bật lại.
+local TeleBestAreaGeneration = 0
+
+local function StartTeleBestArea()
+    TeleBestAreaGeneration = TeleBestAreaGeneration + 1
+    local generation = TeleBestAreaGeneration
+
+    task.spawn(function()
+        while Settings.TeleToBestArea and generation == TeleBestAreaGeneration do
+            local box = QuestScriptBoxes and QuestScriptBoxes.Tele
+            if type(box) == "function" then
+                local ok, err = pcall(function()
+                    box(function()
+                        return Settings.TeleToBestArea and generation == TeleBestAreaGeneration
+                    end)
+                end)
+                if not ok then
+                    warn("[DYUHUB] Tele to Best Area: " .. tostring(err))
+                end
+            end
+            -- Box tự lặp 2 giây; khoảng nghỉ này dùng nếu box kết thúc sớm/lỗi.
+            task.wait(0.25)
+        end
+    end)
+end
+
 Tab1:CreateSection("Tele")
 Tab1:CreateToggle({
     Name = "Tele to Best Area",
@@ -847,6 +872,15 @@ Tab1:CreateToggle({
     Callback = function(Value)
         Settings.TeleToBestArea = Value
         SaveConfig()
+
+        TeleBestAreaGeneration = TeleBestAreaGeneration + 1
+        if Value then
+            StartTeleBestArea()
+        end
     end
 })
+
+if Settings.TeleToBestArea then
+    StartTeleBestArea()
+end
 -- [END] Tele: khu vực riêng cho Auto Teleport to Best Area
