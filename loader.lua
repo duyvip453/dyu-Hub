@@ -690,7 +690,7 @@ local function StopDispatchedQuest(rank)
     state.ActiveQuest = nil
 end
 
--- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
+-- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục, không gate Map/Zone.
 -- Chỉ dispatch nhiệm vụ đầu bảng khi chưa có box nào đang được điều phối.
 -- Trong lúc box chạy, mỗi vòng vẫn cập nhật bảng và đọc progress im lặng.
 local AutoFarmRankGeneration = 0
@@ -708,8 +708,8 @@ local function StartAutoFarmRankLoop()
         local activeRank = nil
         local activeTitle = nil
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
-            -- Priority scanner luôn chạy độc lập với gate Map/Zone để bảng luôn được cập nhật.
-            -- Gate Map4 + Zone279 chỉ quyết định việc giữ/bắt đầu farm, không chặn quét UI.
+            -- Auto Rank không còn kiểm tra Map/Zone: bật toggle là chạy scheduler ngay.
+            -- Scanner và điều kiện xác nhận 4 dòng ưu tiên vẫn được giữ nguyên.
             local found = ScanAndSortQuestRanks()
 
             if activeRank then
