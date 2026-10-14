@@ -785,22 +785,23 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- Chỉ cần có ít nhất một quest hợp lệ; không bắt buộc phải có đủ 4 dòng.
-                -- UI label có thể không cập nhật được trong loadstring, nên không dùng số dòng UI làm điều kiện chạy.
+                -- Giữ điều kiện an toàn ban đầu: phải có cả dòng ưu tiên 1 và 4.
+                -- Quét xác nhận lần hai trước khi dispatch để tránh danh sách thay đổi giữa chừng.
                 local first = found[1]
-                if not first then
-                    SetQuestDebug("không tìm thấy quest hợp lệ (kiểm tra tên/progress/rank)")
-                    task.wait(1)
+                local fourth = found[4]
+                if not first or not fourth then
+                    SetQuestDebug("đang chờ đủ dòng 1 và 4 trên bảng")
+                    task.wait(0.2)
                 else
-                    -- Quét lại để xác nhận quest ưu tiên vẫn ổn định trước khi dispatch.
                     local verified = ScanAndSortQuestRanks()
                     local verifiedFirst = verified[1]
+                    local verifiedFourth = verified[4]
                     local sameFirst = verifiedFirst
                         and verifiedFirst.Rank == first.Rank
                         and verifiedFirst.Title == first.Title
                         and verifiedFirst.Group == first.Group
 
-                    if sameFirst then
+                    if sameFirst and verifiedFourth then
                         local path = QuestRankPaths[verifiedFirst.Rank]
                         local currentTitle, currentProgress
                         if path then
@@ -824,10 +825,11 @@ local function StartAutoFarmRankLoop()
                                 task.wait(0.5)
                             end
                         else
-                            task.wait(0.2)
+                            task.wait(0.1)
                         end
                     else
-                        task.wait(0.2)
+                        -- Ưu tiên 1 hoặc dòng 4 thay đổi trong lúc xác nhận; đợi vòng sau.
+                        task.wait(0.1)
                     end
                 end
             end
