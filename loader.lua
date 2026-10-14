@@ -622,9 +622,20 @@ local function SetQuestDebug(text)
     end
 end
 
+local function SafeSetPriorityLabel(index, text)
+    local label = PriorityLabels[index]
+    if not label then return false end
+    -- UI library label updates may fail in loadstring context due to Instance capability.
+    -- Keep that UI error from terminating the Auto Rank scheduler.
+    local ok = pcall(function()
+        label:Set(tostring(text or ""))
+    end)
+    return ok
+end
+
 local function ClearPriorityTable()
     for index = 1, 4 do
-        PriorityLabels[index]:Set("")
+        SafeSetPriorityLabel(index, "")
     end
 end
 
@@ -663,7 +674,7 @@ local function ScanAndSortQuestRanks()
     -- Reset bảng trước mỗi lần cập nhật để không giữ lại dòng từ lần quét trước.
     ClearPriorityTable()
     for index = 1, math.min(4, #found) do
-        PriorityLabels[index]:Set(string.format("%d. %s", index, found[index].Title))
+        SafeSetPriorityLabel(index, string.format("%d. %s", index, found[index].Title))
     end
 
     return found
