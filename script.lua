@@ -503,8 +503,93 @@ end
 
 
 -- [START] Box Tele: Auto Teleport to Best Area (độc lập với các box nhiệm vụ)
--- Chỉ tạo box trước; logic teleport sẽ được chốt và bổ sung sau.
+-- Mỗi 2 giây: đọc zone cao nhất đã mở -> tìm zone trong Map1..Map4 -> teleport tới BREAK_ZONE.
 QuestScriptBoxes.Tele = function(isEnabled)
-    -- Chưa triển khai hành vi teleport.
+    if type(isEnabled) ~= "function" or not isEnabled() then return end
+
+    local RS = ReplicatedStorage or game:GetService("ReplicatedStorage")
+    local Library = RS:WaitForChild("Library")
+    local ZoneCmds = require(Library:WaitForChild("Client"):WaitForChild("ZoneCmds"))
+
+    local function FindBreakZone()
+        local zoneId, zoneData = ZoneCmds.GetMaxOwnedZone()
+        if not zoneId or type(zoneData) ~= "table" then return nil end
+
+        local zoneNumber = tonumber(zoneData.ZoneNumber)
+        local zoneName = tostring(zoneData.Name or zoneData.DisplayName or "")
+        local maps = workspace
+
+        for mapIndex = 1, 4 do
+            if not isEnabled() then return nil end
+            local map = maps:FindFirstChild("Map" .. mapIndex)
+            if map then
+                -- Ưu tiên zone có ZoneNumber khớp với dữ liệu Directory.
+                for _, candidate in ipairs(map:GetDescendants()) do
+                    if not isEnabled() then return nil end
+                    if candidate.Name == tostring(zoneId)
+                        or (zoneNumber and candidate.Name:match("^(%d+)%s*|") 
+                            and tonumber(candidate.Name:match("^(%d+)%s*|")) == zoneNumber)
+                        or (zoneName ~= "" and candidate.Name == zoneName) then
+                        local interact = candidate:FindFirstChild("INTERACT")
+                        local breakZones = interact and interact:FindFirstChild("BREAK_ZONES")
+                        local breakZone = breakZones and breakZones:FindFirstChild("BREAK_ZONE")
+                        if breakZone and (breakZone:IsA("BasePart") or breakZone:IsA("Model")) then
+                            return breakZone
+                        end
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
+    local target = FindBreakZone()
+    if not target or not isEnabled() then return end
+
+    local position
+    if target:IsA("BasePart") then
+        position = target.Position
+    else
+        position = target:GetPivot().Position
+    end
+
+    local player = Player or game:GetService("Players").LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    if not isEnabled() then return end
+    local root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+    if not root or not isEnabled() then return end
+
+    pcall(function()
+        root.CFrame = CFrame.new(position + Vector3.new(0, 5, 0))
+    end)
+
+    -- Dừng được khi toggle tắt; vòng ngoài của loader sẽ gọi lại sau khi box trả về.
+    -- Lặp 2 giây ở trong box để liên tục cập nhật vị trí Best Area.
+    local nextTeleportAt = os.clock() + 2
+    while isEnabled() do
+        while isEnabled() and os.clock() < nextTeleportAt do
+            task.wait(0.1)
+        end
+        if not isEnabled() then return end
+
+        target = FindBreakZone()
+        if target and isEnabled() then
+            if target:IsA("BasePart") then
+                position = target.Position
+            else
+                position = target:GetPivot().Position
+            end
+
+            character = player.Character or player.CharacterAdded:Wait()
+            if not isEnabled() then return end
+            root = character:FindFirstChild("HumanoidRootPart") or character:WaitForChild("HumanoidRootPart", 5)
+            if root and isEnabled() then
+                pcall(function()
+                    root.CFrame = CFrame.new(position + Vector3.new(0, 5, 0))
+                end)
+            end
+        end
+        nextTeleportAt = os.clock() + 2
+    end
 end
 -- [END] Box Tele
