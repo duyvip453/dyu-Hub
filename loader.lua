@@ -690,28 +690,46 @@ local function StopDispatchedQuest(rank)
     state.ActiveQuest = nil
 end
 
--- [AUTO RANK AREA GATE] Chỉ cho Auto Rank chạy khi Map4 tồn tại và GetMaxOwnedZone() trả ZoneNumber 279.
--- Zone được đọc độc lập bằng ZoneCmds; không suy ra zone từ BREAK_ZONE.
+-- [AUTO RANK AREA GATE] Kiểm tra Map4 và ZoneNumber độc lập.
+-- GetMaxOwnedZone có thể trả dữ liệu ở giá trị trả về thứ nhất hoặc thứ hai.
+-- Không dùng BREAK_ZONE để suy ra zone.
 local function IsAutoRankAreaReady()
-    local ok, ready = pcall(function()
-        local workspaceMap4 = workspace:FindFirstChild("Map4")
-        if not workspaceMap4 then
-            return false
-        end
+    if not workspace:FindFirstChild("Map4") then
+        return false, "không tìm thấy workspace.Map4"
+    end
 
-        local library = ReplicatedStorage:FindFirstChild("Library")
-        local client = library and library:FindFirstChild("Client")
-        local zoneCmdsModule = client and client:FindFirstChild("ZoneCmds")
-        if not zoneCmdsModule then
-            return false
-        end
+    local library = ReplicatedStorage:FindFirstChild("Library")
+    local client = library and library:FindFirstChild("Client")
+    local zoneCmdsModule = client and client:FindFirstChild("ZoneCmds")
+    if not zoneCmdsModule then
+        return false, "không tìm thấy Library.Client.ZoneCmds"
+    end
 
-        local zoneCmds = require(zoneCmdsModule)
-        local _, maxZoneData = zoneCmds.GetMaxOwnedZone()
-        return maxZoneData ~= nil and tonumber(maxZoneData.ZoneNumber) == 279
-    end)
+    local ok, zoneCmds = pcall(require, zoneCmdsModule)
+    if not ok or type(zoneCmds) ~= "table" or type(zoneCmds.GetMaxOwnedZone) ~= "function" then
+        return false, "không require được ZoneCmds.GetMaxOwnedZone"
+    end
 
-    return ok and ready == true
+    local callOk, first, second = pcall(zoneCmds.GetMaxOwnedZone)
+    if not callOk then
+        callOk, first, second = pcall(zoneCmds.GetMaxOwnedZone, zoneCmds)
+    end
+    if not callOk then
+        return false, "GetMaxOwnedZone lỗi: " .. tostring(first)
+    end
+
+    local maxZoneData
+    if type(first) == "table" and first.ZoneNumber ~= nil then
+        maxZoneData = first
+    elseif type(second) == "table" and second.ZoneNumber ~= nil then
+        maxZoneData = second
+    end
+
+    local zoneNumber = maxZoneData and tonumber(maxZoneData.ZoneNumber)
+    if zoneNumber == 279 then
+        return true, "đã xác nhận Map4 + Zone279"
+    end
+    return false, "Map4 có, ZoneNumber hiện tại: " .. tostring(zoneNumber or "không đọc được")
 end
 
 -- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
@@ -734,13 +752,14 @@ local function StartAutoFarmRankLoop()
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
             -- Nếu chưa đúng Map4 + Zone279, dừng box đang chạy và tạm chặn phân phối quest.
             -- Kiểm tra lại sau mỗi 20 giây; khi đúng thì scheduler tiếp tục như bình thường.
-            if not IsAutoRankAreaReady() then
+            local areaReady, areaReason = IsAutoRankAreaReady()
+            if not areaReady then
                 if activeRank then
                     StopDispatchedQuest(activeRank)
                     activeRank = nil
                     activeTitle = nil
                 end
-                SetQuestDebug("đang chờ Map4 + Zone279 (kiểm tra lại sau 20 giây)")
+                SetQuestDebug("Auto Rank chờ: " .. tostring(areaReason) .. " (thử lại sau 20 giây)")
                 task.wait(20)
                 continue
             end
@@ -766,24 +785,22 @@ local function StartAutoFarmRankLoop()
                     task.wait(0.5)
                 end
             else
-                -- Chỉ dispatch khi bảng HIỂN THỊ đã có dòng 1 và dòng 4.
-                -- Đây là điều kiện chờ UI load đủ, không phải kiểm tra rank Extreme.
+                -- Chỉ cần có ít nhất một quest hợp lệ; không bắt buộc phải có đủ 4 dòng.
+                -- UI label có thể không cập nhật được trong loadstring, nên không dùng số dòng UI làm điều kiện chạy.
                 local first = found[1]
-                local fourth = found[4]
-                if not first or not fourth then
-                    SetQuestDebug("đang chờ đủ dòng 1 và 4 trên bảng")
-                    task.wait(0.2)
+                if not first then
+                    SetQuestDebug("không tìm thấy quest hợp lệ (kiểm tra tên/progress/rank)")
+                    task.wait(1)
                 else
-                    -- Quét lại để xác nhận dòng đầu vẫn ổn định và bảng vẫn đủ 4 dòng.
+                    -- Quét lại để xác nhận quest ưu tiên vẫn ổn định trước khi dispatch.
                     local verified = ScanAndSortQuestRanks()
                     local verifiedFirst = verified[1]
-                    local verifiedFourth = verified[4]
                     local sameFirst = verifiedFirst
                         and verifiedFirst.Rank == first.Rank
                         and verifiedFirst.Title == first.Title
                         and verifiedFirst.Group == first.Group
 
-                    if sameFirst and verifiedFourth then
+                    if sameFirst then
                         local path = QuestRankPaths[verifiedFirst.Rank]
                         local currentTitle, currentProgress
                         if path then
@@ -804,14 +821,13 @@ local function StartAutoFarmRankLoop()
                                 SetQuestDebug("đã dispatch " .. verifiedFirst.Title)
                             else
                                 SetQuestDebug("dispatch thất bại: " .. tostring(dispatchReason))
-                                task.wait(0.2)
+                                task.wait(0.5)
                             end
                         else
-                            task.wait(0.1)
+                            task.wait(0.2)
                         end
                     else
-                        -- S1/S4 chưa ổn định qua lần quét xác nhận; đợi vòng sau.
-                        task.wait(0.1)
+                        task.wait(0.2)
                     end
                 end
             end
