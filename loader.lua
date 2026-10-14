@@ -57,7 +57,8 @@ local Settings = {
     AutoQuestMedium = false,
     AutoQuestHard = false,
     AutoQuestExtreme = false,
-    AutoQuestRank = false
+    AutoQuestRank = false,
+    TeleToBestArea = false
 }
 
 local function SaveConfig()
@@ -407,7 +408,8 @@ local QuestScriptBoxes = {
     MakeGolden = nil,
     MakeRainbow = nil,
     UpdatePotion = nil,
-    UpdateEnchant = nil
+    UpdateEnchant = nil,
+    Tele = nil
 }
 local QuestRankState = {}
 for rank in pairs(QuestRankPaths) do
@@ -835,3 +837,16 @@ end
 
 LoadQuestScriptBoxes()
 -- [END] Tải các Script Box từ script.lua trên GitHub
+
+-- [START] Tele: khu vực riêng cho Auto Teleport to Best Area
+-- Tạm thời chỉ tạo UI và lưu cấu hình; logic teleport sẽ được bổ sung sau.
+Tab1:CreateSection("Tele")
+Tab1:CreateToggle({
+    Name = "Tele to Best Area",
+    CurrentValue = Settings.TeleToBestArea,
+    Callback = function(Value)
+        Settings.TeleToBestArea = Value
+        SaveConfig()
+    end
+})
+-- [END] Tele: khu vực riêng cho Auto Teleport to Best Area
