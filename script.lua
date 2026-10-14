@@ -500,3 +500,11 @@ QuestScriptBoxes.UpdateEnchant = function(questTitle, rank, isEnabled)
 end
 -- [END] Box UpdateEnchant
 -- [END] Các box xử lý riêng theo loại nhiệm vụ
+
+
+-- [START] Box Tele: Auto Teleport to Best Area (độc lập với các box nhiệm vụ)
+-- Chỉ tạo box trước; logic teleport sẽ được chốt và bổ sung sau.
+QuestScriptBoxes.Tele = function(isEnabled)
+    -- Chưa triển khai hành vi teleport.
+end
+-- [END] Box Tele
