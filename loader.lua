@@ -750,8 +750,10 @@ local function StartAutoFarmRankLoop()
         local activeRank = nil
         local activeTitle = nil
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
-            -- Nếu chưa đúng Map4 + Zone279, dừng box đang chạy và tạm chặn phân phối quest.
-            -- Kiểm tra lại sau mỗi 20 giây; khi đúng thì scheduler tiếp tục như bình thường.
+            -- Priority scanner luôn chạy độc lập với gate Map/Zone để bảng luôn được cập nhật.
+            -- Gate Map4 + Zone279 chỉ quyết định việc giữ/bắt đầu farm, không chặn quét UI.
+            local found = ScanAndSortQuestRanks()
+
             local areaReady, areaReason = IsAutoRankAreaReady()
             if not areaReady then
                 if activeRank then
@@ -763,8 +765,6 @@ local function StartAutoFarmRankLoop()
                 task.wait(20)
                 continue
             end
-
-            local found = ScanAndSortQuestRanks()
 
             if activeRank then
                 local activePath = QuestRankPaths[activeRank]
