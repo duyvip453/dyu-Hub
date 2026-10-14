@@ -679,6 +679,39 @@ local function StopDispatchedQuest(rank)
     state.ActiveQuest = nil
 end
 
+-- [AUTO RANK AREA GATE] Chỉ cho Auto Rank chạy khi Map4 và GetMaxOwnedZone là Zone279.
+-- Map được kiểm tra riêng qua workspace.Map4; zone lấy bằng ZoneCmds.GetMaxOwnedZone().
+local function IsAutoRankAreaReady()
+    local ok, ready = pcall(function()
+        local workspaceMap4 = workspace:FindFirstChild("Map4")
+        if not workspaceMap4 then
+            return false
+        end
+
+        -- Kiểm tra riêng cấu trúc Break Zone của Zone279 trong Map4.
+        local targetZone = workspaceMap4:FindFirstChild("279 | Hollow Veil Castle", true)
+        local interact = targetZone and targetZone:FindFirstChild("INTERACT")
+        local breakZones = interact and interact:FindFirstChild("BREAK_ZONES")
+        local breakZone = breakZones and breakZones:FindFirstChild("BREAK_ZONE")
+        if not breakZone then
+            return false
+        end
+
+        local library = ReplicatedStorage:FindFirstChild("Library")
+        local client = library and library:FindFirstChild("Client")
+        local zoneCmdsModule = client and client:FindFirstChild("ZoneCmds")
+        if not zoneCmdsModule then
+            return false
+        end
+
+        local zoneCmds = require(zoneCmdsModule)
+        local _, maxZoneData = zoneCmds.GetMaxOwnedZone()
+        return maxZoneData ~= nil and tonumber(maxZoneData.ZoneNumber) == 279
+    end)
+
+    return ok and ready == true
+end
+
 -- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
 -- Chỉ dispatch nhiệm vụ đầu bảng khi chưa có box nào đang được điều phối.
 -- Trong lúc box chạy, mỗi vòng vẫn cập nhật bảng và đọc progress im lặng.
@@ -697,6 +730,19 @@ local function StartAutoFarmRankLoop()
         local activeRank = nil
         local activeTitle = nil
         while Settings.AutoQuestRank and loopGeneration == AutoFarmRankGeneration do
+            -- Nếu chưa đúng Map4 + Zone279, dừng box đang chạy và tạm chặn phân phối quest.
+            -- Kiểm tra lại sau mỗi 20 giây; khi đúng thì scheduler tiếp tục như bình thường.
+            if not IsAutoRankAreaReady() then
+                if activeRank then
+                    StopDispatchedQuest(activeRank)
+                    activeRank = nil
+                    activeTitle = nil
+                end
+                SetQuestDebug("đang chờ Map4 + Zone279 (kiểm tra lại sau 20 giây)")
+                task.wait(20)
+                continue
+            end
+
             local found = ScanAndSortQuestRanks()
 
             if activeRank then
