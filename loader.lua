@@ -679,21 +679,12 @@ local function StopDispatchedQuest(rank)
     state.ActiveQuest = nil
 end
 
--- [AUTO RANK AREA GATE] Chỉ cho Auto Rank chạy khi Map4 và GetMaxOwnedZone là Zone279.
--- Map được kiểm tra riêng qua workspace.Map4; zone lấy bằng ZoneCmds.GetMaxOwnedZone().
+-- [AUTO RANK AREA GATE] Chỉ cho Auto Rank chạy khi Map4 tồn tại và GetMaxOwnedZone() trả ZoneNumber 279.
+-- Zone được đọc độc lập bằng ZoneCmds; không suy ra zone từ BREAK_ZONE.
 local function IsAutoRankAreaReady()
     local ok, ready = pcall(function()
         local workspaceMap4 = workspace:FindFirstChild("Map4")
         if not workspaceMap4 then
-            return false
-        end
-
-        -- Kiểm tra riêng cấu trúc Break Zone của Zone279 trong Map4.
-        local targetZone = workspaceMap4:FindFirstChild("279 | Hollow Veil Castle", true)
-        local interact = targetZone and targetZone:FindFirstChild("INTERACT")
-        local breakZones = interact and interact:FindFirstChild("BREAK_ZONES")
-        local breakZone = breakZones and breakZones:FindFirstChild("BREAK_ZONE")
-        if not breakZone then
             return false
         end
 
