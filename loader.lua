@@ -690,48 +690,6 @@ local function StopDispatchedQuest(rank)
     state.ActiveQuest = nil
 end
 
--- [AUTO RANK AREA GATE] Kiểm tra Map4 và ZoneNumber độc lập.
--- GetMaxOwnedZone có thể trả dữ liệu ở giá trị trả về thứ nhất hoặc thứ hai.
--- Không dùng BREAK_ZONE để suy ra zone.
-local function IsAutoRankAreaReady()
-    if not workspace:FindFirstChild("Map4") then
-        return false, "không tìm thấy workspace.Map4"
-    end
-
-    local library = ReplicatedStorage:FindFirstChild("Library")
-    local client = library and library:FindFirstChild("Client")
-    local zoneCmdsModule = client and client:FindFirstChild("ZoneCmds")
-    if not zoneCmdsModule then
-        return false, "không tìm thấy Library.Client.ZoneCmds"
-    end
-
-    local ok, zoneCmds = pcall(require, zoneCmdsModule)
-    if not ok or type(zoneCmds) ~= "table" or type(zoneCmds.GetMaxOwnedZone) ~= "function" then
-        return false, "không require được ZoneCmds.GetMaxOwnedZone"
-    end
-
-    local callOk, first, second = pcall(zoneCmds.GetMaxOwnedZone)
-    if not callOk then
-        callOk, first, second = pcall(zoneCmds.GetMaxOwnedZone, zoneCmds)
-    end
-    if not callOk then
-        return false, "GetMaxOwnedZone lỗi: " .. tostring(first)
-    end
-
-    local maxZoneData
-    if type(first) == "table" and first.ZoneNumber ~= nil then
-        maxZoneData = first
-    elseif type(second) == "table" and second.ZoneNumber ~= nil then
-        maxZoneData = second
-    end
-
-    local zoneNumber = maxZoneData and tonumber(maxZoneData.ZoneNumber)
-    if zoneNumber == 279 then
-        return true, "đã xác nhận Map4 + Zone279"
-    end
-    return false, "Map4 có, ZoneNumber hiện tại: " .. tostring(zoneNumber or "không đọc được")
-end
-
 -- AutoFarmRankLoop: chờ một giây, sau đó quét cả bốn rank liên tục.
 -- Chỉ dispatch nhiệm vụ đầu bảng khi chưa có box nào đang được điều phối.
 -- Trong lúc box chạy, mỗi vòng vẫn cập nhật bảng và đọc progress im lặng.
@@ -753,18 +711,6 @@ local function StartAutoFarmRankLoop()
             -- Priority scanner luôn chạy độc lập với gate Map/Zone để bảng luôn được cập nhật.
             -- Gate Map4 + Zone279 chỉ quyết định việc giữ/bắt đầu farm, không chặn quét UI.
             local found = ScanAndSortQuestRanks()
-
-            local areaReady, areaReason = IsAutoRankAreaReady()
-            if not areaReady then
-                if activeRank then
-                    StopDispatchedQuest(activeRank)
-                    activeRank = nil
-                    activeTitle = nil
-                end
-                SetQuestDebug("Auto Rank chờ: " .. tostring(areaReason) .. " (thử lại sau 20 giây)")
-                task.wait(20)
-                continue
-            end
 
             if activeRank then
                 local activePath = QuestRankPaths[activeRank]
