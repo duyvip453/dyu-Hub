@@ -917,9 +917,19 @@ local function StartTeleBestArea()
             local box = QuestScriptBoxes and QuestScriptBoxes.Tele
             if type(box) == "function" then
                 local ok, err = pcall(function()
-                    box(function()
-                        return Settings.TeleToBestArea and generation == TeleBestAreaGeneration
-                    end)
+                    box(
+                        function()
+                            return Settings.TeleToBestArea and generation == TeleBestAreaGeneration
+                        end,
+                        function()
+                            Settings.TeleToBestArea = false
+                            SaveConfig()
+                            TeleBestAreaGeneration = TeleBestAreaGeneration + 1
+                            if TeleBestAreaToggle and type(TeleBestAreaToggle.Set) == "function" then
+                                pcall(function() TeleBestAreaToggle:Set(false) end)
+                            end
+                        end
+                    )
                 end)
                 if not ok then
                     warn("[DYUHUB] Tele to Best Area: " .. tostring(err))
@@ -932,7 +942,7 @@ local function StartTeleBestArea()
 end
 
 Tab1:CreateSection("Tele")
-Tab1:CreateToggle({
+local TeleBestAreaToggle = Tab1:CreateToggle({
     Name = "Tele to Best Area",
     CurrentValue = Settings.TeleToBestArea,
     Callback = function(Value)
