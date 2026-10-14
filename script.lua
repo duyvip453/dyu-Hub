@@ -504,14 +504,37 @@ end
 
 -- [START] Box Tele: Auto Teleport to Best Area (độc lập với các box nhiệm vụ)
 -- Mỗi 2 giây: đọc zone cao nhất đã mở -> tìm zone trong Map1..Map4 -> teleport tới BREAK_ZONE.
-QuestScriptBoxes.Tele = function(isEnabled)
+QuestScriptBoxes.Tele = function(isEnabled, stopTele)
     if type(isEnabled) ~= "function" or not isEnabled() then return end
 
     local RS = ReplicatedStorage or game:GetService("ReplicatedStorage")
     local Library = RS:WaitForChild("Library")
     local ZoneCmds = require(Library:WaitForChild("Client"):WaitForChild("ZoneCmds"))
 
+    -- Nếu đã tới Map4 và zone cao nhất là 279, tự tắt Tele và không teleport nữa.
+    local function ShouldStopAtMap4()
+        if not workspace:FindFirstChild("Map4") then return false end
+        local ok, zoneId, zoneData = pcall(ZoneCmds.GetMaxOwnedZone)
+        if not ok then
+            ok, zoneId, zoneData = pcall(ZoneCmds.GetMaxOwnedZone, ZoneCmds)
+        end
+        if not ok or type(zoneData) ~= "table" then return false end
+        return tonumber(zoneData.ZoneNumber) == 279
+    end
+
+    local function StopIfAtMap4()
+        if not isEnabled() then return true end
+        if ShouldStopAtMap4() then
+            if type(stopTele) == "function" then pcall(stopTele) end
+            return true
+        end
+        return false
+    end
+
+    if StopIfAtMap4() then return end
+
     local function FindBreakZone()
+        if StopIfAtMap4() then return nil end
         local zoneId, zoneData = ZoneCmds.GetMaxOwnedZone()
         if not zoneId or type(zoneData) ~= "table" then return nil end
 
@@ -570,7 +593,7 @@ QuestScriptBoxes.Tele = function(isEnabled)
         while isEnabled() and os.clock() < nextTeleportAt do
             task.wait(0.1)
         end
-        if not isEnabled() then return end
+        if StopIfAtMap4() then return end
 
         target = FindBreakZone()
         if target and isEnabled() then
