@@ -511,15 +511,38 @@ QuestScriptBoxes.Tele = function(isEnabled, stopTele)
     local Library = RS:WaitForChild("Library")
     local ZoneCmds = require(Library:WaitForChild("Client"):WaitForChild("ZoneCmds"))
 
+    -- Chuẩn hóa GetMaxOwnedZone: dữ liệu có thể nằm ở return thứ nhất hoặc thứ hai.
+    local function GetMaxZoneData()
+        local ok, first, second = pcall(ZoneCmds.GetMaxOwnedZone)
+        if not ok then
+            ok, first, second = pcall(ZoneCmds.GetMaxOwnedZone, ZoneCmds)
+        end
+        if not ok then
+            warn("[DYUHUB] Tele: GetMaxOwnedZone lỗi: " .. tostring(first))
+            return nil, nil
+        end
+
+        local zoneData
+        if type(first) == "table" and first.ZoneNumber ~= nil then
+            zoneData = first
+        elseif type(second) == "table" and second.ZoneNumber ~= nil then
+            zoneData = second
+        end
+
+        local zoneId
+        if type(first) ~= "table" then
+            zoneId = first
+        elseif type(second) ~= "table" then
+            zoneId = second
+        end
+        return zoneId, zoneData
+    end
+
     -- Nếu đã tới Map4 và zone cao nhất là 279, tự tắt Tele và không teleport nữa.
     local function ShouldStopAtMap4()
         if not workspace:FindFirstChild("Map4") then return false end
-        local ok, zoneId, zoneData = pcall(ZoneCmds.GetMaxOwnedZone)
-        if not ok then
-            ok, zoneId, zoneData = pcall(ZoneCmds.GetMaxOwnedZone, ZoneCmds)
-        end
-        if not ok or type(zoneData) ~= "table" then return false end
-        return tonumber(zoneData.ZoneNumber) == 279
+        local _, zoneData = GetMaxZoneData()
+        return zoneData ~= nil and tonumber(zoneData.ZoneNumber) == 279
     end
 
     local function StopIfAtMap4()
@@ -535,9 +558,10 @@ QuestScriptBoxes.Tele = function(isEnabled, stopTele)
 
     local function FindBreakZone()
         if StopIfAtMap4() then return nil end
-        local zoneId, zoneData = ZoneCmds.GetMaxOwnedZone()
-        if not zoneId or type(zoneData) ~= "table" then return nil end
+        local zoneId, zoneData = GetMaxZoneData()
+        if not zoneData then return nil end
 
+        zoneId = zoneId or zoneData.Id or zoneData.ID or zoneData.ZoneId or zoneData.ZoneID
         local zoneNumber = tonumber(zoneData.ZoneNumber)
         local zoneName = tostring(zoneData.Name or zoneData.DisplayName or "")
         local maps = workspace
