@@ -168,8 +168,7 @@ task.spawn(function()
 end)
 -- [END] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 
--- [START] Hiển thị Rank và tiến độ nhiệm vụ
---rank
+-- [START] Hiển thị Rank
 local CoreGui = game:GetService("CoreGui")
 local RankLabel = Tab1:CreateLabel({Text="Đang tải Rank...",Style=1})
 local RankTextObject
@@ -259,7 +258,6 @@ end
 if AutoUpdatePet then
     RunPetUpdater()
 end
---endslot
 -- [END] Auto Update Egg slot và Pet slot
 
 -- [START] Auto Farm Quest: cấu hình rank, đọc UI, phân loại và điều phối nhiệm vụ
@@ -288,11 +286,6 @@ local QuestRankPaths = {
 -- IdentifyQuestGroup chỉ phân loại; bộ ưu tiên tương lai sẽ chọn Group cần chạy trước.
 -- DispatchQuest là điểm trung gian duy nhất để gọi QuestScriptBoxes[group].
 -- Mỗi handler nhận (questTitle, rank, isEnabled) và phải dừng khi bị hủy/quest hoàn tất.
--- Script boxes: put each group's farming function in its matching box.
--- Each function receives (questTitle, rank, isEnabled) and should return when its own progress is complete.
--- Quest egg automation: the rank-toggle scanner owns progress detection and cancellation.
--- Each hatch loop only checks isEnabled(); the scanner invalidates its generation when progress completes.
-
 local function RunQuestEggHatch(eggName, targetPosition, questTitle, isEnabled, stopWhenReady)
     if not isEnabled() then return end
     local character = Player.Character or Player.CharacterAdded:Wait()
@@ -381,22 +374,15 @@ local function NormalizeQuestText(value, keepNumbers)
     return text
 end
 local QuestMatchRules = {
-    -- Upgrade potion/enchant rules require BOTH keywords; IdentifyQuestGroup checks all Keywords.
     {Group = "UpdatePotion", Keywords = {"upgrade", "potion"}, MatchAll = true},
     {Group = "UpdateEnchant", Keywords = {"upgrade", "enchant"}, MatchAll = true},
-    -- Route Make Golden and Make Rainbow to separate handlers by their own keys.
     {Group = "MakeGolden", KeepNumbers = true, Keywords = {"make", "golden"}, MatchAll = true},
     {Group = "MakeRainbow", KeepNumbers = true, Keywords = {"make", "rainbow"}, MatchAll = true},
-    -- Any quest containing "legendary" must route to LegendaryEggs,
-    -- even if the title does not contain the word "hatch".
     {Group = "LegendaryEggs", AnyKeywords = {"legendary"}},
-    -- Egg quest titles can vary: "Hatch ... eggs", "Hatch ... of your best eggs", etc.
-    -- Route by hatch OR egg/eggs wording, excluding legendary quests handled above.
     {Group = "Eggs", AnyKeywords = {"hatch", "egg", "eggs"}, ExcludeKeywords = {"legendary"}},
     {Group = "Use", Keywords = {"use"}},
     {Group = "CollectPotions", Keywords = {"collect", "potion"}, MatchAll = true},
     {Group = "CollectEnchants", Keywords = {"collect", "enchant"}, MatchAll = true},
-    -- Mỗi event có Group và handler riêng để không dùng chung logic triệu hồi.
     {Group = "BestAreaComet", AnyKeywords = {"comet", "comets"}},
     {Group = "BestAreaCoinJar", AnyKeywords = {"coin jar", "coin jars"}},
     {Group = "BestAreaLuckyBlock", AnyKeywords = {"lucky block", "lucky blocks"}},
@@ -406,7 +392,6 @@ local QuestMatchRules = {
 
 local function IdentifyQuestGroup(questTitle)
     local originalText = NormalizeQuestText(questTitle, true)
-
     -- Phân loại toàn bộ nhiệm vụ qua QuestMatchRules để sau này bộ ưu tiên
     -- có thể chọn Group trước khi gọi QuestScriptBoxes[Group].
     for _, rule in ipairs(QuestMatchRules) do
@@ -490,9 +475,7 @@ local function DispatchQuest(rank, questTitle, questGroup)
     if state.Running or state.ActiveQuest == questTitle then
         return false, "Nhiệm vụ đã được dispatch"
     end
-
     -- Gọi box qua một điểm trung tâm; không log mỗi lần dispatch.
-
     state.Generation = state.Generation + 1
     local generation = state.Generation
     state.ActiveQuest = questTitle
@@ -525,7 +508,6 @@ local function SetQuestRankEnabled(rank, value)
         state.ActiveQuest = nil
     end
 end
-
 -- [AUTO FARM RANK: BẢNG ƯU TIÊN + BỘ ĐIỀU PHỐI]
 -- QuestGroupPriority: số nhỏ hơn nghĩa là nhiệm vụ được ưu tiên chạy trước.
 local QuestGroupPriority = {
