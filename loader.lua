@@ -137,7 +137,8 @@ local Tab1 = Window:CreateTab({
 -- [START] Quét UID Wisp Griffin và Golden Wisp Griffin một lần sau 1 giây
 local AutoRankPetUIDs = {
     WispGriffin = {},
-    GoldenWispGriffin = {}
+    GoldenWispGriffin = {},
+    RainbowWispGriffin = {}
 }
 
 task.delay(1, function()
@@ -148,7 +149,8 @@ task.delay(1, function()
         local pets = PetCmds.GetSortedPets()
         local targets = {
             ["wisp griffin"] = "WispGriffin",
-            ["golden wisp griffin"] = "GoldenWispGriffin"
+            ["golden wisp griffin"] = "GoldenWispGriffin",
+            ["rainbow wisp griffin"] = "RainbowWispGriffin"
         }
 
         for _, pet in ipairs(pets) do
