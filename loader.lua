@@ -2,9 +2,7 @@
 local HttpService = game:GetService("HttpService")
 local Player = game.Players.LocalPlayer
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 -- [START] Tải registry ID Potion/Enchant từ file dữ liệu riêng trên GitHub
--- Hai file phải trả về một Lua table bằng câu lệnh return {...}.
 -- Các box về sau có thể dùng PotionUpgradeIDs.Entries và EnchantUpgradeIDs.Entries.
 local PotionUpgradeIDs = { Version = 1, MachineRemote = "UpgradePotionsMachine_Activate", Entries = {} }
 local EnchantUpgradeIDs = { Version = 1, MachineRemote = "UpgradeEnchantsMachine_Activate", Entries = {} }
