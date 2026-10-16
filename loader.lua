@@ -58,20 +58,16 @@ local Settings = {
     AutoQuestRank = false,
     TeleToBestArea = false
 }
-
 local function SaveConfig()
     if type(writefile) ~= "function" then
                 return false
     end
-
     local ok, err = pcall(function()
         writefile(ConfigFileName, HttpService:JSONEncode(Settings))
     end)
-
     if not ok then
                 return false
     end
-
     return true
 end
 
@@ -79,28 +75,22 @@ local function LoadConfig()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then
                 return
     end
-
     local existsOk, exists = pcall(function()
         return isfile(ConfigFileName)
     end)
-
     if not existsOk then
                 return
     end
-
     if not exists then
         SaveConfig()
         return
     end
-
     local readOk, data = pcall(function()
         return HttpService:JSONDecode(readfile(ConfigFileName))
     end)
-
     if not readOk or type(data) ~= "table" then
                 return
     end
-
     for key, value in pairs(data) do
         if Settings[key] ~= nil and type(value) == type(Settings[key]) then
             Settings[key] = value
@@ -144,20 +134,17 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
-
 -- [START] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 local CurrentMaxEggHatchAmount = 1
 local EggCmds
 local CurrencyCmds
 local CalcEggPricePlayer
-
 local function RefreshMaxEggHatchAmount()
     local ok, amount = pcall(function()
         local RS = ReplicatedStorage
         local Library = RS:WaitForChild("Library")
         local Client = Library:WaitForChild("Client")
         local Balancing = Library:WaitForChild("Balancing")
-
         -- Nạp các module liên quan giống quy trình kiểm tra trong client.
         EggCmds = EggCmds or require(Client:WaitForChild("EggCmds"))
         CurrencyCmds = CurrencyCmds or require(Client:WaitForChild("CurrencyCmds"))
@@ -170,10 +157,8 @@ local function RefreshMaxEggHatchAmount()
     if ok and type(amount) == "number" and amount >= 1 then
         CurrentMaxEggHatchAmount = math.floor(amount)
     end
-
     return CurrentMaxEggHatchAmount
 end
-
 -- Đọc ngay một lần khi khởi tạo, sau đó làm mới định kỳ mỗi 30 giây.
 task.spawn(function()
     RefreshMaxEggHatchAmount()
@@ -198,52 +183,7 @@ if RankTextObject then
     RankTextObject.TextSize = 28
     RankTextObject.Font = Enum.Font.GothamBold
 end
-Tab1:CreateSection("Nhiệm vụ")
-local EasyLabel = Tab1:CreateLabel({Text="Easy: Đang tải...",Style=1})
-local MediumLabel = Tab1:CreateLabel({Text="Medium: Đang tải...",Style=1})
-local HardLabel = Tab1:CreateLabel({Text="Hard: Đang tải...",Style=1})
-local ExtremeLabel = Tab1:CreateLabel({Text="Extreme: Đang tải...",Style=1})
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(function()
-            local PlayerGui = Player:FindFirstChild("PlayerGui")
-            if not PlayerGui then return end
-            local GoalsSide = PlayerGui:FindFirstChild("GoalsSide")
-            if not GoalsSide then return end
-            local Frame = GoalsSide:FindFirstChild("Frame")
-            if not Frame then return end
-            local Top = Frame:FindFirstChild("Top")
-            if Top and Top:FindFirstChild("Title") then
-                RankLabel:Set(Top.Title.Text)
-            end
-            local Quests = Frame:FindFirstChild("Quests")
-            local QuestsGradient = Quests and Quests:FindFirstChild("QuestsGradient")
-            local QuestsHolder = QuestsGradient and QuestsGradient:FindFirstChild("QuestsHolder")
-            if not QuestsHolder then return end
-            local Easy = QuestsHolder:FindFirstChild("Easy")
-            local Medium = QuestsHolder:FindFirstChild("Medium")
-            local Hard = QuestsHolder:FindFirstChild("Hard")
-            local Extreme = QuestsHolder:FindFirstChild("Extreme")
-
-            if Easy and Easy:FindFirstChild("Title") and Easy:FindFirstChild("Progress") then
-                EasyLabel:Set(Easy.Title.Text .. " | " .. Easy.Progress.Text)
-            end
-            if Medium and Medium:FindFirstChild("Title") and Medium:FindFirstChild("Progress") then
-                MediumLabel:Set(Medium.Title.Text .. " | " .. Medium.Progress.Text)
-            end
-            if Hard and Hard:FindFirstChild("Title") and Hard:FindFirstChild("Progress") then
-                HardLabel:Set(Hard.Title.Text .. " | " .. Hard.Progress.Text)
-            end
-            if Extreme and Extreme:FindFirstChild("Title") and Extreme:FindFirstChild("Progress") then
-                ExtremeLabel:Set(Extreme.Title.Text .. " | " .. Extreme.Progress.Text)
-            end
-        end)
-    end
-end)
---endrank
--- [END] Hiển thị Rank và tiến độ nhiệm vụ
-
-
+-- [END] Hiển thị Rank 
 
 -- [START] Auto Update Egg slot và Pet slot
 local AutoUpdateEgg = Settings.AutoUpdateEgg
