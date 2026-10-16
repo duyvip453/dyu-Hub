@@ -134,6 +134,44 @@ local Tab1 = Window:CreateTab({
     ImageSource = "Material",
     ShowTitle = true
 })
+-- [START] Quét UID Wisp Griffin và Golden Wisp Griffin một lần sau 1 giây
+local AutoRankPetUIDs = {
+    WispGriffin = {},
+    GoldenWispGriffin = {}
+}
+
+task.delay(1, function()
+    pcall(function()
+        local PetCmds = require(
+            ReplicatedStorage:WaitForChild("Library"):WaitForChild("Client"):WaitForChild("PetCmds")
+        )
+        local pets = PetCmds.GetSortedPets()
+        local targets = {
+            ["wisp griffin"] = "WispGriffin",
+            ["golden wisp griffin"] = "GoldenWispGriffin"
+        }
+
+        for _, pet in ipairs(pets) do
+            local nameOk, name = pcall(function()
+                return pet:GetName()
+            end)
+
+            if nameOk and name then
+                local key = targets[string.lower(tostring(name))]
+                if key then
+                    local uidOk, uid = pcall(function()
+                        return pet:GetUID()
+                    end)
+                    if uidOk and uid then
+                        table.insert(AutoRankPetUIDs[key], uid)
+                    end
+                end
+            end
+        end
+    end)
+end)
+-- [END] Quét UID Wisp Griffin và Golden Wisp Griffin một lần sau 1 giây
+
 -- [START] Đọc số Egg buy max qua EggCmds, cập nhật cache mỗi 30 giây
 local CurrentMaxEggHatchAmount = 1
 local EggCmds
@@ -756,6 +794,7 @@ local function LoadQuestScriptBoxes()
             IsQuestProgressComplete = IsQuestProgressComplete,
             SetQuestDebug = SetQuestDebug,
             RunQuestEggHatch = RunQuestEggHatch,
+            AutoRankPetUIDs = AutoRankPetUIDs,
         }, { __index = getfenv() })
         setfenv(compile, env)
         compile()
